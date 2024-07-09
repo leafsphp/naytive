@@ -1,0 +1,11 @@
+export type int = number;
+export type float = number;
+export type double = number;
+export type long = number;
+export type longlong = number;
+export type short = number;
+export type uint = number;
+export type ushort = number;
+export type ulong = number;
+export type ulonglong = number;
+export type longdouble = number;

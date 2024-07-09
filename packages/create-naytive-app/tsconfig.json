@@ -1,0 +1,4 @@
+{
+  "extends": "@naytive/config/tsconfig/bin.json",
+  "exclude": ["dist", "template"]
+}
