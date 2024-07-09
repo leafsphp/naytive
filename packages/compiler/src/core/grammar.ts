@@ -246,6 +246,10 @@ grammar.set(
       return `std::to_string(${expression})`;
     }
 
+    if (name === 'forEach') {
+      return `for (int i = 0; i < ${expression}.size(); i++)`;
+    }
+
     return `${expression}.${name}`;
   }
 );
@@ -263,7 +267,35 @@ grammar.set(ts.SyntaxKind.CallExpression, (node, { tsSourceFile }) => {
     Parser.parseNode(arg, tsSourceFile)
   );
 
-  // console.log('callExpression', callExpression.getText(tsSourceFile));
+  if (callExpression.expression.getText(tsSourceFile).includes('.forEach')) {
+    const forEachFunction = callExpression.arguments?.[0] as ts.ArrowFunction;
+    const forEachFunctionArguments = forEachFunction.parameters.map(
+      (parameter) => Parser.parseVariable(parameter, tsSourceFile)
+    );
+
+    let loopVariables = '';
+
+    if (forEachFunctionArguments.length > 0) {
+      loopVariables += `${forEachFunctionArguments[0]} = ${(
+        callExpression.expression as ts.PropertyAccessExpression
+      ).expression.getText()}[i];\n`;
+
+      if (forEachFunctionArguments[1]) {
+        loopVariables += `${forEachFunctionArguments[1]} = i;\n`;
+      }
+
+      if (forEachFunctionArguments[2]) {
+        loopVariables += `${forEachFunctionArguments[2]} = ${(
+          callExpression.expression as ts.PropertyAccessExpression
+        ).expression.getText()};\n`;
+      }
+    }
+
+    return `${expression} {\n${loopVariables}\n${Parser.parseNode(
+      forEachFunction.body!,
+      tsSourceFile
+    )}}`;
+  }
 
   if (
     callExpression.expression.kind === ts.SyntaxKind.PropertyAccessExpression

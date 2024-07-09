@@ -1,8 +1,8 @@
-import { std } from "@naytive/core";
-import { int } from "@naytive/types";
+import { std } from '@naytive/core';
+import { int } from '@naytive/types';
 
 export default function main(): int {
-  const myNumbers: Array<int> = [10, 20, 30, 40, 50];
+  const myNumbers: int[] = [10, 20, 30, 40, 50];
 
   if (myNumbers.length > 0) {
     for (let i = 0; i < myNumbers.length; i++) {
@@ -10,13 +10,13 @@ export default function main(): int {
     }
   }
 
-  // myNumbers.forEach((num, index, array) => {
-  //   std.cout(`${num} - ${index}\n`);
+  myNumbers.forEach((num: int, index: int, array: int[]) => {
+    std.cout(`${num} - ${index}\n`);
 
-  //   array.forEach((num) => {
-  //     std.cout(`${num}\n`);
-  //   });
-  // });
+    array.forEach((aNumber) => {
+      std.cout(`${index} -> ${aNumber}\n`);
+    });
+  });
 
   return 0;
 }

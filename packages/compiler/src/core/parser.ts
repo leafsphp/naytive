@@ -118,10 +118,12 @@ export default class Parser {
     }
 
     if (
-      varValue?.startsWith('[') &&
-      (varValue?.endsWith(']') || varValue?.endsWith('];'))
+      (varValue?.startsWith('[') &&
+        (varValue?.endsWith(']') || varValue?.endsWith('];'))) ||
+      type.includes('Array') ||
+      type.includes('array')
     ) {
-      const arrayLength = eval(varValue!).length;
+      const arrayLength = eval(varValue!)?.length;
 
       this.addLibrary('#include <array>');
 
@@ -141,6 +143,11 @@ export default class Parser {
         .replace('string', 'std::string')
         .replace('number', 'int')
         .replace('boolean', 'bool');
+    }
+
+    if (type.endsWith('[]')) {
+      // return type.replace('[]', '');
+      return 'auto';
     }
 
     if (type === 'string') {

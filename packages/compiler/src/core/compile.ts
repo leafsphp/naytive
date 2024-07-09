@@ -66,7 +66,7 @@ export default function Compile(compilerConfig: Partial<CompilerConfig>) {
           $({
             cwd: buildDir,
             stdio: 'inherit',
-          })`g++ -o ${naytiveBuild} ${cppFile} ${
+          })`g++  -std=c++17 -o ${naytiveBuild} ${cppFile} ${
             otherFiles ? otherFiles : ''
           }`.then(() => {
             console.log(colors.green(`✔ Successfully Compiled\n`));
