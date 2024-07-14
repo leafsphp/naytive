@@ -2,7 +2,7 @@
   "private": true,
   "scripts": {
     "build": "turbo build",
-    "dev": "turbo dev --no-cache --filter=@naytive/core --filter=@naytive/types --filter=@naytive/compiler",
+    "dev": "turbo dev --no-cache --filter=@naytive/core --filter=@naytive/types --filter=@naytive/compiler --filter=@naytive/avr",
     "lint": "turbo lint",
     "clean": "turbo clean && rm -rf node_modules",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",

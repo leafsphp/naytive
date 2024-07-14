@@ -1,0 +1,18 @@
+{
+  "name": "example-pointers",
+  "version": "1.0.0",
+  "description": "C++ Pointers test",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "naytive --watch",
+    "build": "naytive",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@naytive/core": "workspace:*",
+    "@naytive/types": "workspace:*",
+    "@naytive/compiler": "workspace:*"
+  },
+  "author": "",
+  "license": "MIT"
+}

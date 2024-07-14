@@ -1,4 +1,4 @@
-export type Pointer<T = any> = T & { __pointer__: void };
+export type Pointer<_T = any> = { dereference: () => _T };
 
 export class memory {
   static pointer = <T = any>(value: T): Pointer<T> => value as Pointer<T>;

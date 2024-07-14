@@ -12,6 +12,7 @@ export type CompilerConfig = {
   keepCppSource: boolean;
   noNativeBuild: boolean;
   compileType: '.cpp' | '.c' | '.ino';
+  config?: Record<string, any>;
 };
 
 export type CompilerGrammar = (

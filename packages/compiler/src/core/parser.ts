@@ -88,17 +88,22 @@ export default class Parser {
       );
     }
 
-    if (parsedCode.length === 0) {
-      if (grammar.get(node.kind)) {
-        parsedCode.push(
-          grammar.get(node.kind)!(node, {
-            tsSourceFile,
-            filePath,
-          })
-        );
-      } else {
-        parsedCode.push(node.getText(tsSourceFile));
-      }
+    if (node.getText(tsSourceFile).startsWith('declare')) {
+      parsedCode.push(
+        grammar.get(ts.SyntaxKind.DeclareKeyword)!(node, {
+          tsSourceFile,
+          filePath,
+        })
+      );
+    } else if (grammar.get(node.kind)) {
+      parsedCode.push(
+        grammar.get(node.kind)!(node, {
+          tsSourceFile,
+          filePath,
+        })
+      );
+    } else {
+      parsedCode.push(node.getText(tsSourceFile));
     }
 
     return parsedCode.join('\n');
@@ -115,6 +120,13 @@ export default class Parser {
       }
 
       return 'int';
+    }
+
+    if (/^Pointer<\w+>$/.test(type)) {
+      this.addLibrary('#include <memory>');
+      this.addLibrary('#include <iostream>');
+
+      return this.parseTypes(type.replace(/^Pointer<(\w+)>$/, '$1')) + '*';
     }
 
     if (
