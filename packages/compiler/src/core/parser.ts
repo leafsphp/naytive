@@ -10,6 +10,7 @@ export default class Parser {
   protected static _config: CompilerConfig;
   protected static _libraries: string[] = [];
   protected static _imports: string[] = [];
+  protected static _c_functions: Record<string, string> = {};
 
   protected static sourceFile: ts.SourceFile;
   protected static _typeChecker: ts.TypeChecker;
@@ -48,8 +49,18 @@ export default class Parser {
     }
   }
 
+  public static addCFunction(name: string, fn: string): void {
+    if (!this._c_functions[name]) {
+      this._c_functions[name] = fn;
+    }
+  }
+
   public static get imports(): string[] {
-    return [...this._libraries, ...this._imports];
+    return [
+      ...this._libraries,
+      ...Object.values(this._c_functions),
+      ...this._imports,
+    ];
   }
 
   public static parse(filePath: string): string {
@@ -123,8 +134,8 @@ export default class Parser {
     }
 
     if (/^Pointer<\w+>$/.test(type)) {
-      this.addLibrary('#include <memory>');
       this.addLibrary('#include <iostream>');
+      this.addLibrary('#include <memory>');
 
       return this.parseTypes(type.replace(/^Pointer<(\w+)>$/, '$1')) + '*';
     }
@@ -137,15 +148,25 @@ export default class Parser {
     ) {
       const arrayLength = eval(varValue!)?.length;
 
-      this.addLibrary('#include <array>');
-
       if (arrayLength) {
+        this.addLibrary('#include <array>');
+
         if (type?.startsWith('array<') || type?.startsWith('Array<')) {
           if (!type?.includes(',') && arrayLength) {
             type = type?.replace('>', `, ${arrayLength}>`);
           }
         } else {
           type = `std::array<${type?.replace('[]', '')}, ${arrayLength}>`;
+        }
+      } else {
+        this.addLibrary('#include <vector>');
+
+        if (type?.startsWith('array<') || type?.startsWith('Array<')) {
+          type = type
+            ?.replace('array<', 'std::vector<')
+            .replace('Array<', 'std::vector<');
+        } else {
+          type = `std::vector<${type?.replace('[]', '')}>`;
         }
       }
 
@@ -174,14 +195,36 @@ export default class Parser {
     return type;
   }
 
+  public static getType(node: any, tsSourceFile: ts.SourceFile): string {
+    const symbol = Parser.typeChecker
+      .getSymbolAtLocation(node)
+      ?.getDeclarations()?.[0] as any;
+
+    const type = this.parseTypes(
+      symbol?.valueDeclaration?.type?.getText(tsSourceFile) ||
+        node.type?.getText(tsSourceFile) ||
+        Parser.typeChecker.typeToString(
+          Parser.typeChecker.getTypeAtLocation(node),
+          node
+        ),
+      symbol?.initializer?.getText(tsSourceFile) ??
+        node.initializer?.getText(tsSourceFile)
+    );
+
+    if (!isNaN(type as any) && type.includes(' ')) {
+      return this.parseTypes(typeof type);
+    }
+
+    return type;
+  }
+
   public static parseVariable(
     variable: ts.ParameterDeclaration | ts.VariableDeclaration,
     sourceFile?: ts.SourceFile
   ): string {
     const variableName = variable.name.getText(sourceFile);
-    const variableType = variable.type?.getText(sourceFile);
-    const variableValue = variable.initializer?.getText(sourceFile);
+    const variableType = this.getType(variable, sourceFile!);
 
-    return `${this.parseTypes(variableType, variableValue)} ${variableName}`;
+    return `${variableType} ${variableName}`;
   }
 }

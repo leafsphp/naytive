@@ -130,15 +130,8 @@ grammar.set(ts.SyntaxKind.VariableDeclaration, (node, { tsSourceFile }) => {
   const variable = node as ts.VariableDeclaration;
 
   let variableName = variable.name.getText(tsSourceFile);
+  let variableType = Parser.getType(variable, tsSourceFile);
   let variableValue = Parser.parseNode(variable.initializer!, tsSourceFile);
-  let variableType = Parser.parseTypes(
-    variable.type?.getText(tsSourceFile) ||
-      Parser.typeChecker.typeToString(
-        Parser.typeChecker.getTypeAtLocation(node),
-        node
-      ),
-    variable.initializer?.getText(tsSourceFile)
-  );
 
   if (variable.initializer?.kind === ts.SyntaxKind.ArrowFunction) {
     const arrowFunction = variable.initializer as ts.ArrowFunction;
@@ -167,7 +160,10 @@ grammar.set(ts.SyntaxKind.VariableDeclaration, (node, { tsSourceFile }) => {
   }
 
   if (variable.initializer?.kind === ts.SyntaxKind.ArrayLiteralExpression) {
-    if (!variableType.includes('std::array<')) {
+    if (
+      !variableType.includes('std::array<') &&
+      !variableType.includes('std::vector<')
+    ) {
       variableName = `${variableName}[]`;
     }
 
@@ -210,31 +206,89 @@ grammar.set(
       propertyAccessExpression.expression.getText(tsSourceFile);
 
     if (name === 'length') {
-      let variableType = '';
+      return `${expression}.size()`;
+    }
 
-      const symbol = Parser.typeChecker
-        .getSymbolAtLocation(propertyAccessExpression.expression)
-        ?.getDeclarations()?.[0] as any;
+    if (name === 'toUpperCase') {
+      Parser.addLibrary('#include <string>');
+      Parser.addCFunction(
+        'str_to_upper',
+        `std::string str_to_upper(std::string str)
+{
+  for (int i = 0; i < str.size(); i++)
+  {
+    if (str[i] >= 'a' && str[i] <= 'z')
+    {
+      str[i] = str[i] - 32;
+    }
+  }
+  return str;
+};`
+      );
 
-      if (symbol) {
-        variableType =
-          symbol.type?.getText() ||
-          Parser.typeChecker.typeToString(
-            Parser.typeChecker.getTypeAtLocation(
-              propertyAccessExpression.expression
-            ),
-            symbol
-          );
-      }
+      return `str_to_upper(${expression})`;
+    }
 
-      if (variableType === 'string') {
-        return `${expression}.size()`;
-      } else if (
-        variableType.includes('[]') ||
-        variableType.includes('Array<')
-      ) {
-        return `${expression}.size()`;
-      }
+    if (name === 'toLowerCase') {
+      Parser.addLibrary('#include <string>');
+      Parser.addCFunction(
+        'str_to_lower',
+        `std::string str_to_lower(std::string str)
+{
+  for (int i = 0; i < str.size(); i++)
+  {
+    if (str[i] >= 'A' && str[i] <= 'Z')
+    {
+      str[i] = str[i] + 32;
+    }
+  }
+  return str;
+};`
+      );
+
+      return `str_to_lower(${expression})`;
+    }
+
+    if (name === 'replace') {
+      Parser.addLibrary('#include <string>');
+      Parser.addCFunction(
+        'str_replace',
+        `std::string str_replace(std::string str, std::string from, std::string to)
+{
+  size_t start_pos = 0;
+  while ((start_pos = str.find(from, start_pos)) != std::string::npos)
+  {
+    str.replace(start_pos, from.length(), to);
+    start_pos += to.length();
+  }
+  return str;
+};`
+      );
+
+      return `str_replace(${expression})`;
+    }
+
+    if (name === 'split') {
+      Parser.addLibrary('#include <string>');
+      Parser.addLibrary('#include <vector>');
+      Parser.addLibrary('#include <sstream>');
+
+      Parser.addCFunction(
+        'str_explode',
+        `std::vector<std::string> stringToArray(const std::string &str)
+{
+  std::vector<std::string> result;
+  std::istringstream iss(str);
+  std::string word;
+
+  while (iss >> word)
+  {
+    result.push_back(word);
+  }
+
+  return result;
+};`
+      );
     }
 
     if (name === 'toString') {
@@ -326,26 +380,14 @@ grammar.set(ts.SyntaxKind.TemplateExpression, (node, { tsSourceFile }) => {
   return templateExpression
     .getText(tsSourceFile)
     .replace(/(\${)(.*?)(})/g, (_, __, _expression) => {
-      const symbol = Parser.typeChecker
-        .getSymbolAtLocation(templateExpression.templateSpans[0].expression)
-        ?.getDeclarations()?.[0] as any;
+      // const variableType = Parser.getType(
+      //   templateExpression.templateSpans[0].expression,
+      //   tsSourceFile
+      // );
 
-      if (symbol) {
-        const variableType = Parser.parseTypes(
-          symbol.type?.getText() ||
-            Parser.typeChecker.typeToString(
-              Parser.typeChecker.getTypeAtLocation(
-                templateExpression.templateSpans[0].expression
-              ),
-              symbol
-            ),
-          symbol?.initializer?.getText()
-        );
-
-        if (variableType !== 'std::string' && !variableType.endsWith('*')) {
-          return `" + std::to_string(${parsedTemplateSpans.shift()!}) + "`;
-        }
-      }
+      // if (variableType !== 'std::string' && !variableType.endsWith('*')) {
+      //   return `" + std::to_string(${parsedTemplateSpans.shift()!}) + "`;
+      // }
 
       return `" + ${parsedTemplateSpans.shift()!} + "`;
     })
@@ -478,6 +520,15 @@ grammar.set(ts.SyntaxKind.ForStatement, (node, { tsSourceFile }) => {
   const statement = Parser.parseNode(forStatement.statement, tsSourceFile);
 
   return `for (${initializer}; ${condition}; ${incrementor}) {\n${statement}\n}`;
+});
+
+grammar.set(ts.SyntaxKind.TypeOfExpression, (node, { tsSourceFile }) => {
+  const typeOfExpression = node as ts.TypeOfExpression;
+
+  return `typeid(${Parser.parseNode(
+    typeOfExpression.expression,
+    tsSourceFile
+  )}).name()`;
 });
 
 // JAVASCRIPT/NAYTIVE LIBRARY GRAMMAR
