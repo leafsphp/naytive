@@ -1,0 +1,18 @@
+{
+  "name": "example-typescript-expressions",
+  "version": "1.0.0",
+  "description": "typescript expressions test",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "naytive --watch",
+    "build": "naytive",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "@naytive/compiler": "workspace:*",
+    "@naytive/types": "workspace:*",
+    "@naytive/core": "workspace:*"
+  },
+  "author": "",
+  "license": "MIT"
+}
