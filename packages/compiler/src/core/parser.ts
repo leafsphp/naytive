@@ -125,12 +125,42 @@ export default class Parser {
       return 'auto';
     }
 
+    if (type === 'longdouble') {
+      return 'long double';
+    }
+
+    if (type === 'longlong') {
+      return 'long long';
+    }
+
     if (type === 'number') {
       if (varValue?.includes('.')) {
+        if (varValue?.length > 7) {
+          return 'double';
+        } else if (varValue?.length > 15) {
+          return 'long double';
+        }
+
         return 'float';
       }
 
+      const number = Number(varValue);
+
+      if (number < 0) {
+        if (number < -32768) {
+          return 'int';
+        } else {
+          return 'short';
+        }
+      }
+
+      if (number < 65535) {
+        return 'unsigned short';
+      }
+
       return 'int';
+    } else if (!isNaN(Number(type))) {
+      return this.parseTypes('number', varValue);
     }
 
     if (/^Pointer<\w+>$/.test(type)) {
@@ -183,13 +213,12 @@ export default class Parser {
       return 'auto';
     }
 
-    if (type === 'string') {
-      //  || eval(`typeof ${varValue}`) === 'string'
-      return 'std::string';
-    }
-
     if (type === 'boolean') {
       return 'bool';
+    }
+
+    if (type === 'string' || /,.@#%&*()_ +{}|":?><`~;[]\-=/.test(varValue)) {
+      return 'std::string';
     }
 
     return type;
@@ -210,10 +239,6 @@ export default class Parser {
       symbol?.initializer?.getText(tsSourceFile) ??
         node.initializer?.getText(tsSourceFile)
     );
-
-    if (!isNaN(type as any) && type.includes(' ')) {
-      return this.parseTypes(typeof type);
-    }
 
     return type;
   }

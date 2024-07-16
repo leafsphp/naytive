@@ -360,6 +360,16 @@ grammar.set(ts.SyntaxKind.CallExpression, (node, { tsSourceFile }) => {
       return `*${expression.replace('.dereference', '')}`;
     }
 
+    if (expression.startsWith('std.')) {
+      Parser.addLibrary('#include <iostream>');
+
+      if (expression.includes('std.setprecision')) {
+        Parser.addLibrary('#include <iomanip>');
+      }
+
+      return `${expression.replace('std.', 'std::')}(${args.join(', ')})`;
+    }
+
     return (
       expression + (expression.includes('(') ? args.join() : `(${args.join()})`)
     );
