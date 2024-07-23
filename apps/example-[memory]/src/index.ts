@@ -3,7 +3,7 @@ import { int } from '@naytive/types';
 
 export default function main(): int {
   let food: string = 'Pizza';
-  const foodPointer: Pointer<string> = memory.pointer(food);
+  const foodPointer: Pointer<string> = memory.unsafe(food);
 
   food = alert('What\'s your favorite food?\n') as any;
 

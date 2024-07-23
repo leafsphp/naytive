@@ -12,6 +12,7 @@ server/dist
 public/dist
 .turbo
 *.out
+cache/
 
 test
 parser-old.ts

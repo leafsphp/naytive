@@ -28,6 +28,8 @@
 
 Naytive is a fast, lightweight and easy-to-use interface for writing low-level code in TypeScript. It is designed to be a simple and efficient way to replace C/C++ code with more readable and maintainable TypeScript code. This means that you can write low-level code in TypeScript, and then compile it to native code using the Naytive compiler.
 
+![image](https://github.com/user-attachments/assets/388b01c6-a688-4d75-8732-3f671681f744)
+
 This opens up a whole new world of possibilities for TypeScript developers, as they can now write code that can interact with the operating system, hardware, and other low-level components in a way that was previously only possible with C/C++.
 
 ## Example
