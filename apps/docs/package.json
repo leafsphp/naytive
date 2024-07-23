@@ -1,4 +1,7 @@
 {
+  "name": "docs",
+  "version": "1.0.0",
+  "description": "Documentation for the project",
   "scripts": {
     "dev": "vitepress dev",
     "build": "vitepress build",
