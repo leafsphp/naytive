@@ -2,15 +2,19 @@ import path from 'path';
 import colors from 'colors';
 import * as ts from 'typescript';
 
+import Lexer from './lexer';
 import grammar from './grammar';
 
 import { CompilerConfig } from '../@types/core';
+import { NaytiveNode } from '../@types/lexer';
 
 export default class Parser {
   protected static _config: CompilerConfig;
-  protected static _libraries: string[] = [];
   protected static _imports: string[] = [];
+  protected static _libraries: string[] = [];
+  protected static _hasMain: boolean = false;
   protected static _c_functions: Record<string, string> = {};
+  protected static _app_functions: Record<string, string> = {};
 
   protected static sourceFile: ts.SourceFile;
   protected static _typeChecker: ts.TypeChecker;
@@ -22,10 +26,6 @@ export default class Parser {
     this._typeChecker = program.getTypeChecker();
 
     return sourceFile;
-  }
-
-  public static get typeChecker(): ts.TypeChecker {
-    return this._typeChecker;
   }
 
   public static config(config?: CompilerConfig) {
@@ -55,12 +55,23 @@ export default class Parser {
     }
   }
 
+  public static addAppFunction(name: string, fn: string): void {
+    if (!this._app_functions[name]) {
+      this._app_functions[name] = fn;
+    }
+  }
+
   public static get imports(): string[] {
     return [
       ...this._libraries,
       ...Object.values(this._c_functions),
       ...this._imports,
+      ...Object.values(this._app_functions),
     ];
+  }
+
+  public static get typeChecker(): ts.TypeChecker {
+    return this._typeChecker;
   }
 
   public static parse(filePath: string): string {
@@ -77,15 +88,69 @@ export default class Parser {
 
     this.sourceFile = tsSourceFile;
 
-    tsSourceFile.forEachChild((node) => {
-      parsedCode.push(this.parseNode(node, tsSourceFile, filePath));
+    // const isFunction = (node: ts.Node) => {
+    //   const response: { name?: string; body?: ts.Node } = {};
+
+    //   if (node.kind === ts.SyntaxKind.FunctionDeclaration) {
+    //     const fn = node as ts.FunctionDeclaration;
+
+    //     response.name = fn.name?.getText(tsSourceFile);
+    //     response.body = fn.body;
+    //   } else if (node.kind === ts.SyntaxKind.VariableDeclaration) {
+    //     const variable = node as ts.VariableDeclaration;
+
+    //     if (variable.initializer?.kind === ts.SyntaxKind.ArrowFunction) {
+    //       const arrowFn = variable.initializer as ts.ArrowFunction;
+
+    //       response.name = variable.name.getText(tsSourceFile);
+    //       response.body = arrowFn.body;
+    //     }
+    //   } else if (node.kind === ts.SyntaxKind.VariableStatement) {
+    //     const variable = node as ts.VariableStatement;
+
+    //     if (
+    //       variable.declarationList.declarations[0].initializer?.kind ===
+    //       ts.SyntaxKind.ArrowFunction
+    //     ) {
+    //       const arrowFn = variable.declarationList.declarations[0]
+    //         .initializer as ts.ArrowFunction;
+
+    //       response.name =
+    //         variable.declarationList.declarations[0].name.getText(tsSourceFile);
+    //       response.body = arrowFn.body;
+    //     }
+    //   }
+
+    //   return response;
+    // };
+
+    const nodes = Lexer.naytify(tsSourceFile, tsSourceFile);
+
+    nodes.forEachChild((node) => {
+      // const fn = isFunction(node);
+
+      // if (fn.name) {
+      //   if (fn.name === 'main') {
+      //     this._hasMain = true;
+      //     parsedCode.push(this.parseNode(node, tsSourceFile, filePath));
+      //   } else {
+      //     this.addAppFunction(
+      //       fn.name!,
+      //       this.parseNode(node, tsSourceFile, filePath)
+      //     );
+      //   }
+      // } else {
+      // }
+      parsedCode.push(this.parseNode(node as NaytiveNode, tsSourceFile, filePath));
     });
 
-    return parsedCode.join('\n');
+    return this._hasMain
+      ? parsedCode.join('\n')
+      : `\nint main() {${parsedCode.join('\n')} return 0;\n}`;
   }
 
   public static parseNode(
-    node: ts.Node,
+    node: NaytiveNode,
     tsSourceFile: ts.SourceFile,
     filePath?: string
   ): string {

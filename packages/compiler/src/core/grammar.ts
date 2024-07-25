@@ -10,8 +10,28 @@ import path from 'path';
 import colors from 'colors';
 import * as ts from 'typescript';
 
-import { CompilerConfig, CompilerGrammar } from '../@types/core';
 import Parser from './parser';
+
+import type { CompilerConfig, CompilerGrammar } from '../@types/core';
+import type {
+  ArrayLiteralExpression,
+  ArrowFunction,
+  BinaryExpression,
+  Block,
+  CallExpression,
+  ExpressionStatement,
+  ForStatement,
+  FunctionDeclaration,
+  IfStatement,
+  ImportDeclaration,
+  PropertyAccessExpression,
+  StringLiteral,
+  TemplateExpression,
+  TypeOfExpression,
+  VariableDeclaration,
+  VariableDeclarationList,
+  VariableStatement,
+} from '../@types/lexer';
 
 export const libraries: Record<string, string> = {
   std: 'iostream',
@@ -40,7 +60,7 @@ const grammar = new Map<ts.SyntaxKind | string, CompilerGrammar>();
 grammar.set(
   ts.SyntaxKind.ImportDeclaration,
   (node, { tsSourceFile, filePath }) => {
-    const importDeclaration = node as ts.ImportDeclaration;
+    const importDeclaration = node as ImportDeclaration;
     const moduleSpecifier =
       importDeclaration.moduleSpecifier.getText(tsSourceFile);
     const namedImports = importDeclaration.importClause?.namedBindings;
@@ -127,11 +147,16 @@ grammar.set(ts.SyntaxKind.DeclareKeyword, (node, { tsSourceFile }) => {
 });
 
 grammar.set(ts.SyntaxKind.VariableDeclaration, (node, { tsSourceFile }) => {
-  const variable = node as ts.VariableDeclaration;
+  const variable = node as VariableDeclaration;
+
+  console.log('Variablesss:', variable?.naytive, variable.name.getText(tsSourceFile));
 
   let variableName = variable.name.getText(tsSourceFile);
-  let variableType = Parser.getType(variable, tsSourceFile);
-  let variableValue = Parser.parseNode(variable.initializer!, tsSourceFile);
+  let variableType = variable?.naytive?.type;
+  let variableValue = Parser.parseNode(
+    variable.initializer! as any,
+    tsSourceFile
+  );
 
   if (variable.initializer?.kind === ts.SyntaxKind.ArrowFunction) {
     const arrowFunction = variable.initializer as ts.ArrowFunction;
@@ -144,7 +169,7 @@ grammar.set(ts.SyntaxKind.VariableDeclaration, (node, { tsSourceFile }) => {
 
     return `${functionType} ${variableName}(${functionArguments}) {\n${
       (arrowFunction.body?.kind !== ts.SyntaxKind.Block ? 'return ' : '') +
-      Parser.parseNode(arrowFunction.body!, tsSourceFile)
+      Parser.parseNode(arrowFunction.body! as any, tsSourceFile)
     };\n}`;
   }
 
@@ -161,8 +186,8 @@ grammar.set(ts.SyntaxKind.VariableDeclaration, (node, { tsSourceFile }) => {
 
   if (variable.initializer?.kind === ts.SyntaxKind.ArrayLiteralExpression) {
     if (
-      !variableType.includes('std::array<') &&
-      !variableType.includes('std::vector<')
+      !variableType?.includes('std::array<') &&
+      !variableType?.includes('std::vector<')
     ) {
       variableName = `${variableName}[]`;
     }
@@ -176,20 +201,23 @@ grammar.set(ts.SyntaxKind.VariableDeclaration, (node, { tsSourceFile }) => {
 });
 
 grammar.set(ts.SyntaxKind.VariableDeclarationList, (node, { tsSourceFile }) => {
-  const variableDeclarationList = node as ts.VariableDeclarationList;
+  const variableDeclarationList = node as VariableDeclarationList;
   const variableDeclaration = variableDeclarationList.declarations[0];
 
-  return grammar.get(ts.SyntaxKind.VariableDeclaration)!(variableDeclaration, {
-    tsSourceFile,
-  });
+  return grammar.get(ts.SyntaxKind.VariableDeclaration)!(
+    variableDeclaration as any,
+    {
+      tsSourceFile,
+    }
+  );
 });
 
 grammar.set(ts.SyntaxKind.VariableStatement, (node, { tsSourceFile }) => {
-  const variableStatement = node as ts.VariableStatement;
+  const variableStatement = node as VariableStatement;
   const variableDeclaration = variableStatement.declarationList.declarations[0];
 
   return `${grammar.get(ts.SyntaxKind.VariableDeclaration)!(
-    variableDeclaration,
+    variableDeclaration as any,
     {
       tsSourceFile,
     }
@@ -199,7 +227,7 @@ grammar.set(ts.SyntaxKind.VariableStatement, (node, { tsSourceFile }) => {
 grammar.set(
   ts.SyntaxKind.PropertyAccessExpression,
   (node, { tsSourceFile }) => {
-    const propertyAccessExpression = node as ts.PropertyAccessExpression;
+    const propertyAccessExpression = node as PropertyAccessExpression;
 
     const name = propertyAccessExpression.name.getText(tsSourceFile);
     const expression =
@@ -306,16 +334,22 @@ grammar.set(
 );
 
 grammar.set(ts.SyntaxKind.ExpressionStatement, (node, { tsSourceFile }) => {
-  const expressionStatement = node as ts.ExpressionStatement;
+  const expressionStatement = node as ExpressionStatement;
 
-  return `${Parser.parseNode(expressionStatement.expression, tsSourceFile)};`;
+  return `${Parser.parseNode(
+    expressionStatement.expression as any,
+    tsSourceFile
+  )};`;
 });
 
 grammar.set(ts.SyntaxKind.CallExpression, (node, { tsSourceFile }) => {
-  const callExpression = node as ts.CallExpression;
-  const expression = Parser.parseNode(callExpression.expression, tsSourceFile);
+  const callExpression = node as CallExpression;
+  const expression = Parser.parseNode(
+    callExpression.expression as any,
+    tsSourceFile
+  );
   const args = callExpression.arguments.map((arg) =>
-    Parser.parseNode(arg, tsSourceFile)
+    Parser.parseNode(arg as any, tsSourceFile)
   );
 
   if (callExpression.expression.getText(tsSourceFile).includes('.forEach')) {
@@ -343,7 +377,7 @@ grammar.set(ts.SyntaxKind.CallExpression, (node, { tsSourceFile }) => {
     }
 
     return `${expression} {\n${loopVariables}\n${Parser.parseNode(
-      forEachFunction.body!,
+      forEachFunction.body! as any,
       tsSourceFile
     )}}`;
   }
@@ -379,12 +413,12 @@ grammar.set(ts.SyntaxKind.CallExpression, (node, { tsSourceFile }) => {
 });
 
 grammar.set(ts.SyntaxKind.TemplateExpression, (node, { tsSourceFile }) => {
-  const templateExpression = node as ts.TemplateExpression;
+  const templateExpression = node as TemplateExpression;
 
   Parser.addLibrary('#include <string>');
 
   const parsedTemplateSpans = templateExpression.templateSpans.map((span) =>
-    Parser.parseNode(span.expression, tsSourceFile)
+    Parser.parseNode(span.expression as any, tsSourceFile)
   );
 
   return templateExpression
@@ -409,7 +443,7 @@ grammar.set(ts.SyntaxKind.FirstTemplateToken, (node, { tsSourceFile }) => {
 });
 
 grammar.set(ts.SyntaxKind.StringLiteral, (node) => {
-  const stringLiteral = node as ts.StringLiteral;
+  const stringLiteral = node as StringLiteral;
 
   Parser.addLibrary('#include <string>');
 
@@ -417,20 +451,20 @@ grammar.set(ts.SyntaxKind.StringLiteral, (node) => {
 });
 
 grammar.set(ts.SyntaxKind.ArrayLiteralExpression, (node, { tsSourceFile }) => {
-  const arrayLiteralExpression = node as ts.ArrayLiteralExpression;
+  const arrayLiteralExpression = node as ArrayLiteralExpression;
   const elements = arrayLiteralExpression.elements.map((element) =>
-    Parser.parseNode(element, tsSourceFile)
+    Parser.parseNode(element as any, tsSourceFile)
   );
 
   return `{${elements.join(', ')}}`;
 });
 
 grammar.set(ts.SyntaxKind.BinaryExpression, (node, { tsSourceFile }) => {
-  const binaryExpression = node as ts.BinaryExpression;
-  const left = Parser.parseNode(binaryExpression.left, tsSourceFile);
+  const binaryExpression = node as BinaryExpression;
+  const left = Parser.parseNode(binaryExpression.left as any, tsSourceFile);
   const operator = binaryExpression.operatorToken.getText(tsSourceFile);
 
-  let right = Parser.parseNode(binaryExpression.right, tsSourceFile);
+  let right = Parser.parseNode(binaryExpression.right as any, tsSourceFile);
 
   if (right?.startsWith('std.cin') || right?.startsWith('alert(')) {
     const stdInPrompt = right.match(/(?<=\()(.*)(?=\))/)?.[0];
@@ -448,7 +482,7 @@ grammar.set(ts.SyntaxKind.BinaryExpression, (node, { tsSourceFile }) => {
 });
 
 grammar.set(ts.SyntaxKind.FunctionDeclaration, (node, { tsSourceFile }) => {
-  const functionDeclaration = node as ts.FunctionDeclaration;
+  const functionDeclaration = node as FunctionDeclaration;
   const functionName = functionDeclaration.name?.getText(tsSourceFile);
   const functionArguments = functionDeclaration.parameters
     .map((parameter) => Parser.parseVariable(parameter, tsSourceFile))
@@ -458,18 +492,18 @@ grammar.set(ts.SyntaxKind.FunctionDeclaration, (node, { tsSourceFile }) => {
   );
 
   return `${functionType} ${functionName}(${functionArguments}) {\n${Parser.parseNode(
-    functionDeclaration.body!,
+    functionDeclaration.body! as any,
     tsSourceFile
   )}\n}`;
 });
 
 grammar.set(ts.SyntaxKind.ArrowFunction, (node, { tsSourceFile }) => {
-  const variable = node as ts.VariableStatement;
+  const variable = node as VariableStatement;
   const variableDeclaration = variable.declarationList?.declarations?.[0];
 
   const arrowFunction =
-    (variableDeclaration?.initializer as ts.ArrowFunction) ||
-    (node as ts.ArrowFunction);
+    (variableDeclaration?.initializer as ArrowFunction) ||
+    (node as ArrowFunction);
 
   const functionName = variableDeclaration?.name?.getText(tsSourceFile);
   const functionArguments = arrowFunction.parameters
@@ -481,22 +515,22 @@ grammar.set(ts.SyntaxKind.ArrowFunction, (node, { tsSourceFile }) => {
 
   if (!functionName) {
     return `${functionType}(${functionArguments}) {\n${Parser.parseNode(
-      arrowFunction.body!,
+      arrowFunction.body! as any,
       tsSourceFile
     )}\n}`;
   }
 
   return `${functionType} ${functionName}(${functionArguments}) {\n${Parser.parseNode(
-    arrowFunction.body!,
+    arrowFunction.body! as any,
     tsSourceFile
   )}\n}`;
 });
 
 grammar.set(ts.SyntaxKind.Block, (node, { tsSourceFile, filePath }) => {
-  const block = node as ts.Block;
+  const block = node as Block;
   const parsedCode: string[] = [];
 
-  block.statements.forEach((statement) => {
+  block.statements.forEach((statement: any) => {
     parsedCode.push(Parser.parseNode(statement, tsSourceFile, filePath));
   });
 
@@ -504,17 +538,20 @@ grammar.set(ts.SyntaxKind.Block, (node, { tsSourceFile, filePath }) => {
 });
 
 grammar.set(ts.SyntaxKind.IfStatement, (node, { tsSourceFile }) => {
-  const ifStatement = node as ts.IfStatement;
+  const ifStatement = node as IfStatement;
 
-  const condition = Parser.parseNode(ifStatement.expression, tsSourceFile);
+  const condition = Parser.parseNode(
+    ifStatement.expression as any,
+    tsSourceFile
+  );
 
   const thenStatement = Parser.parseNode(
-    ifStatement.thenStatement,
+    ifStatement.thenStatement as any,
     tsSourceFile
   );
 
   const elseStatement = ifStatement.elseStatement
-    ? Parser.parseNode(ifStatement.elseStatement, tsSourceFile)
+    ? Parser.parseNode(ifStatement.elseStatement as any, tsSourceFile)
     : '';
 
   return `if (${condition}) {\n${thenStatement}\n} ${
@@ -523,20 +560,33 @@ grammar.set(ts.SyntaxKind.IfStatement, (node, { tsSourceFile }) => {
 });
 
 grammar.set(ts.SyntaxKind.ForStatement, (node, { tsSourceFile }) => {
-  const forStatement = node as ts.ForStatement;
-  const initializer = Parser.parseNode(forStatement.initializer!, tsSourceFile);
-  const condition = Parser.parseNode(forStatement.condition!, tsSourceFile);
-  const incrementor = Parser.parseNode(forStatement.incrementor!, tsSourceFile);
-  const statement = Parser.parseNode(forStatement.statement, tsSourceFile);
+  const forStatement = node as ForStatement;
+
+  const initializer = Parser.parseNode(
+    forStatement.initializer! as any,
+    tsSourceFile
+  );
+  const condition = Parser.parseNode(
+    forStatement.condition! as any,
+    tsSourceFile
+  );
+  const incrementor = Parser.parseNode(
+    forStatement.incrementor! as any,
+    tsSourceFile
+  );
+  const statement = Parser.parseNode(
+    forStatement.statement as any,
+    tsSourceFile
+  );
 
   return `for (${initializer}; ${condition}; ${incrementor}) {\n${statement}\n}`;
 });
 
 grammar.set(ts.SyntaxKind.TypeOfExpression, (node, { tsSourceFile }) => {
-  const typeOfExpression = node as ts.TypeOfExpression;
+  const typeOfExpression = node as TypeOfExpression;
 
   return `typeid(${Parser.parseNode(
-    typeOfExpression.expression,
+    typeOfExpression.expression as any,
     tsSourceFile
   )}).name()`;
 });
@@ -544,34 +594,37 @@ grammar.set(ts.SyntaxKind.TypeOfExpression, (node, { tsSourceFile }) => {
 // JAVASCRIPT/NAYTIVE LIBRARY GRAMMAR
 
 grammar.set('std.cout', (node, { tsSourceFile }) => {
-  const cout = node as ts.CallExpression;
+  const cout = node as CallExpression;
   const values = cout.arguments
-    .map((arg) => Parser.parseNode(arg, tsSourceFile))
+    .map((arg) => Parser.parseNode(arg as any, tsSourceFile))
     .join(' << ');
 
   return `std::cout << ${values.replace(/\s*\+\s*/g, ' << ')}`;
 });
 
 grammar.set('console.log', (node, { tsSourceFile }) => {
-  const cout = node as ts.CallExpression;
+  const cout = node as CallExpression;
   const values = cout.arguments
-    .map((arg) => Parser.parseNode(arg, tsSourceFile))
+    .map((arg) => Parser.parseNode(arg as any, tsSourceFile))
     .join(' << ');
 
   return `std::cout << ${values.replace(/\s*\+\s*/g, ' << ')}`;
 });
 
 grammar.set('memory.pointer', (node, { tsSourceFile }) => {
-  const pointer = node as ts.CallExpression;
-  const pointerValue = Parser.parseNode(pointer.arguments[0], tsSourceFile);
+  const pointer = node as CallExpression;
+  const pointerValue = Parser.parseNode(
+    pointer.arguments[0] as any,
+    tsSourceFile
+  );
 
   return `&${pointerValue}`;
 });
 
 grammar.set('memory.dereference', (node, { tsSourceFile }) => {
-  const dereference = node as ts.CallExpression;
+  const dereference = node as CallExpression;
   const dereferenceValue = Parser.parseNode(
-    dereference.arguments[0],
+    dereference.arguments[0] as any,
     tsSourceFile
   );
 

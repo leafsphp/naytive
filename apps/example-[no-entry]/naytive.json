@@ -1,0 +1,8 @@
+{
+  "entry": "src/index.ts",
+  "output": "dist",
+  "optimizeApp": true,
+  "optimizeDeps": true,
+  "keepCppSource": true,
+  "debug": true
+}

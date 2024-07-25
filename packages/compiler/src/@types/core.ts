@@ -1,5 +1,7 @@
 import * as ts from 'typescript';
 
+import type { NaytiveNode } from './lexer';
+
 export type CompilerConfig = {
   watch: boolean;
   entry: string;
@@ -16,7 +18,7 @@ export type CompilerConfig = {
 };
 
 export type CompilerGrammar = (
-  node: ts.Node,
+  node: NaytiveNode,
   params: {
     tsSourceFile: ts.SourceFile;
     filePath?: string;

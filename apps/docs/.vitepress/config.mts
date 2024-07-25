@@ -73,8 +73,8 @@ export default defineConfig({
         text: 'Advanced',
         items: [
           { text: 'Async Naytive', link: '/docs/advanced/async' },
-          { text: 'Curl', link: '/docs/advanced/curl' },
-          // { text: 'Installation', link: '/docs/advanced/installation' },
+          { text: 'Using Curl', link: '/docs/advanced/curl' },
+          { text: 'Arduino', link: '/docs/advanced/arduino' },
           // { text: 'Naytive for C++ devs', link: '/docs/advanced/for-cpp-devs' },
           // { text: 'Naytive for TS devs', link: '/docs/advanced/for-ts-devs' },
         ],
