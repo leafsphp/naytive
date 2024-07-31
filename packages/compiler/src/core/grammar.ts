@@ -32,28 +32,12 @@ import type {
   VariableDeclarationList,
   VariableStatement,
 } from '../@types/lexer';
+import Lexer from './lexer';
 
 export const libraries: Record<string, string> = {
   std: 'iostream',
   array: 'array',
 };
-
-export const types = [
-  'int',
-  'struct',
-  'array',
-  'char',
-  'float',
-  'double',
-  'long',
-  'longlong',
-  'short',
-  'uint',
-  'ushort',
-  'ulong',
-  'ulonglong',
-  'longdouble',
-];
 
 const grammar = new Map<ts.SyntaxKind | string, CompilerGrammar>();
 
@@ -146,26 +130,52 @@ grammar.set(ts.SyntaxKind.DeclareKeyword, (node, { tsSourceFile }) => {
     .replace(';', '')}`;
 });
 
+grammar.set(ts.SyntaxKind.FirstStatement, (node, { tsSourceFile }) => {
+  return grammar.get(ts.SyntaxKind.ExpressionStatement)!(node, {
+    tsSourceFile,
+  });
+});
+
 grammar.set(ts.SyntaxKind.VariableDeclaration, (node, { tsSourceFile }) => {
   const variable = node as VariableDeclaration;
 
-  console.log('Variablesss:', variable?.naytive, variable.name.getText(tsSourceFile));
+  const isRoot =
+    Parser.hasMain &&
+    variable?.parent?.parent?.parent?.kind === ts.SyntaxKind.SourceFile;
 
   let variableName = variable.name.getText(tsSourceFile);
   let variableType = variable?.naytive?.type;
+
   let variableValue = Parser.parseNode(
     variable.initializer! as any,
     tsSourceFile
   );
 
   if (variable.initializer?.kind === ts.SyntaxKind.ArrowFunction) {
-    const arrowFunction = variable.initializer as ts.ArrowFunction;
+    const arrowFunction = variable.initializer as ArrowFunction;
     const functionArguments = arrowFunction.parameters
       .map((parameter) => Parser.parseVariable(parameter, tsSourceFile))
       .join(', ');
     const functionType =
-      Parser.parseTypes(arrowFunction.type?.getText(tsSourceFile)) ||
-      variableType;
+      variableName === 'main' && variableType === 'unsigned short'
+        ? 'int'
+        : variableType || arrowFunction.naytive?.type || 'auto';
+
+    console.log(
+      variable?.naytive,
+      arrowFunction.naytive,
+      variable?.getText(variable?.getSourceFile()),
+      'scoped'
+    );
+
+    if (!isRoot) {
+      return `${
+        functionType === 'void' ? 'auto' : functionType
+      } ${variableName} = [](${functionArguments}) {${Parser.parseNode(
+        arrowFunction.body! as any,
+        tsSourceFile
+      )}}`;
+    }
 
     return `${functionType} ${variableName}(${functionArguments}) {\n${
       (arrowFunction.body?.kind !== ts.SyntaxKind.Block ? 'return ' : '') +
@@ -173,14 +183,14 @@ grammar.set(ts.SyntaxKind.VariableDeclaration, (node, { tsSourceFile }) => {
     };\n}`;
   }
 
-  if (variableValue?.includes('std.cin') || variableValue?.includes('alert(')) {
+  if (variableValue?.includes('std::cin')) {
     const stdInPrompt = variableValue.match(/(?<=\()(.*)(?=\))/)?.[0];
 
     return `${variableType} ${variableName};\n${
       stdInPrompt ? `std::cout << ${stdInPrompt};\n` : ''
     }\n${variableValue
       .replace(stdInPrompt || '', '')
-      .replace(/std\.cin\((.*)\)/, `std::cin >> ${variableName}`)
+      .replace(/std\::cin\((.*)\)/, `std::cin >> ${variableName}`)
       .replace(/alert\((.*)\)/, `std::cin >> ${variableName}`)}`;
   }
 
@@ -238,85 +248,28 @@ grammar.set(
     }
 
     if (name === 'toUpperCase') {
+      Parser.addNaytiveLib('str_to_upper');
       Parser.addLibrary('#include <string>');
-      Parser.addCFunction(
-        'str_to_upper',
-        `std::string str_to_upper(std::string str)
-{
-  for (int i = 0; i < str.size(); i++)
-  {
-    if (str[i] >= 'a' && str[i] <= 'z')
-    {
-      str[i] = str[i] - 32;
-    }
-  }
-  return str;
-};`
-      );
 
       return `str_to_upper(${expression})`;
     }
 
     if (name === 'toLowerCase') {
-      Parser.addLibrary('#include <string>');
-      Parser.addCFunction(
-        'str_to_lower',
-        `std::string str_to_lower(std::string str)
-{
-  for (int i = 0; i < str.size(); i++)
-  {
-    if (str[i] >= 'A' && str[i] <= 'Z')
-    {
-      str[i] = str[i] + 32;
-    }
-  }
-  return str;
-};`
-      );
+      Parser.addNaytiveLib('str_to_lower');
 
       return `str_to_lower(${expression})`;
     }
 
     if (name === 'replace') {
-      Parser.addLibrary('#include <string>');
-      Parser.addCFunction(
-        'str_replace',
-        `std::string str_replace(std::string str, std::string from, std::string to)
-{
-  size_t start_pos = 0;
-  while ((start_pos = str.find(from, start_pos)) != std::string::npos)
-  {
-    str.replace(start_pos, from.length(), to);
-    start_pos += to.length();
-  }
-  return str;
-};`
-      );
+      Parser.addNaytiveLib('str_replace');
 
       return `str_replace(${expression})`;
     }
 
     if (name === 'split') {
-      Parser.addLibrary('#include <string>');
-      Parser.addLibrary('#include <vector>');
-      Parser.addLibrary('#include <sstream>');
+      Parser.addNaytiveLib('str_to_array');
 
-      Parser.addCFunction(
-        'str_explode',
-        `std::vector<std::string> stringToArray(const std::string &str)
-{
-  std::vector<std::string> result;
-  std::istringstream iss(str);
-  std::string word;
-
-  while (iss >> word)
-  {
-    result.push_back(word);
-  }
-
-  return result;
-};`
-      );
+      return `str_to_array(${expression})`;
     }
 
     if (name === 'toString') {
@@ -466,7 +419,7 @@ grammar.set(ts.SyntaxKind.BinaryExpression, (node, { tsSourceFile }) => {
 
   let right = Parser.parseNode(binaryExpression.right as any, tsSourceFile);
 
-  if (right?.startsWith('std.cin') || right?.startsWith('alert(')) {
+  if (right?.startsWith('std.cin')) {
     const stdInPrompt = right.match(/(?<=\()(.*)(?=\))/)?.[0];
 
     return `${
@@ -483,13 +436,85 @@ grammar.set(ts.SyntaxKind.BinaryExpression, (node, { tsSourceFile }) => {
 
 grammar.set(ts.SyntaxKind.FunctionDeclaration, (node, { tsSourceFile }) => {
   const functionDeclaration = node as FunctionDeclaration;
+  const functionType = functionDeclaration.naytive?.type;
   const functionName = functionDeclaration.name?.getText(tsSourceFile);
   const functionArguments = functionDeclaration.parameters
     .map((parameter) => Parser.parseVariable(parameter, tsSourceFile))
     .join(', ');
-  const functionType = Parser.parseTypes(
-    functionDeclaration.type?.getText(tsSourceFile)
-  );
+
+  const isRoot =
+    Parser.hasMain &&
+    functionDeclaration?.parent?.parent?.parent?.kind ===
+      ts.SyntaxKind.SourceFile;
+
+  if (!isRoot) {
+    const dependencies: ts.Node[] = [];
+    const parsedDeps: string[] = [];
+
+    const extractIdentifiers = (node: ts.Node) => {
+      if (ts.isIdentifier(node)) {
+        dependencies.push(node);
+      }
+
+      ts.forEachChild(node, extractIdentifiers);
+    };
+
+    extractIdentifiers(functionDeclaration);
+
+    dependencies.forEach((dependency) => {
+      const depSymbol = Parser.typeChecker.getSymbolAtLocation(dependency);
+
+      const isSameFunction = depSymbol?.valueDeclaration === functionDeclaration;
+      const isDeclarationPresent = !!depSymbol?.valueDeclaration?.getText();
+
+      if (!isSameFunction && isDeclarationPresent) {
+        const nearestFunctionParent = Lexer.findFuntionParent(depSymbol?.valueDeclaration!);
+
+        if (
+          nearestFunctionParent !== functionDeclaration &&
+          (
+            depSymbol?.valueDeclaration?.kind === ts.SyntaxKind.FunctionDeclaration ||
+            depSymbol?.valueDeclaration?.kind === ts.SyntaxKind.ArrowFunction ||
+            depSymbol?.valueDeclaration?.kind === ts.SyntaxKind.VariableDeclaration
+          )
+        ) {
+          const valueDeclaration = depSymbol?.valueDeclaration;
+          const valueName = valueDeclaration?.name?.getText();
+
+          parsedDeps.push(valueName);
+        }
+      }
+    });
+
+    // console.log(
+    //   'FUNCTION DECLARATION',
+    //   functionDeclaration.getText(),
+    //   dependencies
+    // );
+
+    // if (
+    //   ![ts.SyntaxKind.ImportClause, ts.SyntaxKind.SourceFile].includes(
+    //     symbol.kind
+    //   )
+    // ) {
+    //   // @ts-expect-error - id is not a property of ts node
+    //   symbol.id ??= `${symbol.pos}-${symbol.end}`;
+
+    //   nodeInfo.rawScopedDependencies?.push(
+    //     symbol.getText(symbol.getSourceFile())
+    //   );
+
+    //   // @ts-expect-error - id is not a property of ts node
+    //   nodeInfo.scopedDependencies[symbol.id] = symbol;
+    // }
+
+    return `${
+      functionType === 'void' ? 'auto' : functionType
+    } ${functionName} = [${parsedDeps.join(', ')}](${functionArguments}) {${Parser.parseNode(
+      functionDeclaration.body! as any,
+      tsSourceFile
+    )}}`;
+  }
 
   return `${functionType} ${functionName}(${functionArguments}) {\n${Parser.parseNode(
     functionDeclaration.body! as any,
@@ -509,15 +534,20 @@ grammar.set(ts.SyntaxKind.ArrowFunction, (node, { tsSourceFile }) => {
   const functionArguments = arrowFunction.parameters
     .map((parameter) => Parser.parseVariable(parameter, tsSourceFile))
     .join(', ');
-  const functionType = Parser.parseTypes(
-    arrowFunction.type?.getText(tsSourceFile)
-  );
+  const functionType = arrowFunction.naytive?.type || variable.naytive?.type;
 
   if (!functionName) {
-    return `${functionType}(${functionArguments}) {\n${Parser.parseNode(
+    return `[](${functionArguments}) {${Parser.parseNode(
       arrowFunction.body! as any,
       tsSourceFile
-    )}\n}`;
+    )}}`;
+  }
+
+  if (arrowFunction.naytive?.isNested) {
+    return `${functionType} ${functionName} = [](${functionArguments}) {${Parser.parseNode(
+      arrowFunction.body! as any,
+      tsSourceFile
+    )}}`;
   }
 
   return `${functionType} ${functionName}(${functionArguments}) {\n${Parser.parseNode(
@@ -589,6 +619,15 @@ grammar.set(ts.SyntaxKind.TypeOfExpression, (node, { tsSourceFile }) => {
     typeOfExpression.expression as any,
     tsSourceFile
   )}).name()`;
+});
+
+grammar.set(ts.SyntaxKind.ReturnStatement, (node, { tsSourceFile }) => {
+  const returnStatement = node as unknown as ts.ReturnStatement;
+
+  return `return ${Parser.parseNode(
+    returnStatement.expression as any,
+    tsSourceFile
+  )}`;
 });
 
 // JAVASCRIPT/NAYTIVE LIBRARY GRAMMAR

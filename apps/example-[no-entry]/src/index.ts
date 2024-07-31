@@ -1,6 +1,12 @@
 import { std } from '@naytive/core';
 
-const x = 2;
-const y = x;
+const x = 1;
 
-std.cout(y);
+function y() {
+  const z = 2;
+
+  std.cout(x);
+  std.cout(z);
+};
+
+y();

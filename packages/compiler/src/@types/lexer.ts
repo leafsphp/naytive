@@ -4,11 +4,12 @@ export interface BaseNaytiveNode {
   id: number;
   naytive: {
     type?: string;
-    isNested: boolean;
     symbol?: NaytiveNode;
     initialValue?: string;
     dependents: NaytiveNode[];
     dependencies: NaytiveNode[];
+    rawScopedDependencies?: string[];
+    scopedDependencies: Record<string, NaytiveNode[]>;
   };
 }
 

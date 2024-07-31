@@ -4,5 +4,5 @@
   "optimizeApp": true,
   "optimizeDeps": true,
   "keepCppSource": true,
-  "debug": true
+  "debug": false
 }

@@ -2,10 +2,6 @@ export class std {
   static cout: (message: any) => void;
   static cin: (message?: string) => string;
   static endl: string;
-  static string: string;
-  static vector: any;
-  static map: any;
-  static set: any;
   static pair: any;
   static tuple: any;
   static array: any;
