@@ -486,28 +486,6 @@ grammar.set(ts.SyntaxKind.FunctionDeclaration, (node, { tsSourceFile }) => {
       }
     });
 
-    // console.log(
-    //   'FUNCTION DECLARATION',
-    //   functionDeclaration.getText(),
-    //   dependencies
-    // );
-
-    // if (
-    //   ![ts.SyntaxKind.ImportClause, ts.SyntaxKind.SourceFile].includes(
-    //     symbol.kind
-    //   )
-    // ) {
-    //   // @ts-expect-error - id is not a property of ts node
-    //   symbol.id ??= `${symbol.pos}-${symbol.end}`;
-
-    //   nodeInfo.rawScopedDependencies?.push(
-    //     symbol.getText(symbol.getSourceFile())
-    //   );
-
-    //   // @ts-expect-error - id is not a property of ts node
-    //   nodeInfo.scopedDependencies[symbol.id] = symbol;
-    // }
-
     return `${
       functionType === 'void' ? 'auto' : functionType
     } ${functionName} = [${parsedDeps.join(', ')}](${functionArguments}) {${Parser.parseNode(

@@ -35,7 +35,6 @@ export default class Lexer {
     node: ts.Node,
     tsSourceFile: ts.SourceFile
   ): NaytiveNode {
-    let specialNode = false;
     const id = `${node.pos}-${node.end}`;
 
     if (this.nodes[id]) {
@@ -48,8 +47,6 @@ export default class Lexer {
       ) {
         return cachedNode;
       }
-
-      specialNode = true;
     }
 
     if (node.getChildren().length > 0) {
@@ -92,149 +89,11 @@ export default class Lexer {
       node.forEachChild((child) => {
         child = this.naytify(child, tsSourceFile);
       });
-    } else if (node.kind === ts.SyntaxKind.CallExpression) {
-      const symbol = Parser.typeChecker
-        .getSymbolAtLocation(node.expression)
-        ?.getDeclarations()?.[0]?.parent?.parent as NaytiveNode;
-
-      if (symbol) {
-        nodeInfo.symbol = this.naytify(symbol, tsSourceFile);
-        nodeInfo.dependencies.push(nodeInfo.symbol);
-      }
-
-      // @ts-expect-error - expression is readonly
-      node.expression = this.naytify(node.expression, tsSourceFile);
-
-      // @ts-expect-error - arg is readonly
-      node.arguments.forEach((arg) => {
-        arg = this.naytify(arg, tsSourceFile);
-      });
-    } else if (node.kind === ts.SyntaxKind.TemplateExpression) {
-      // @ts-expect-error - expression is readonly
-      node.templateSpans.forEach((span) => {
-        const symbol = Parser.typeChecker
-          .getSymbolAtLocation(span.expression)
-          ?.getDeclarations()?.[0]?.parent?.parent as NaytiveNode;
-
-        if (symbol) {
-          nodeInfo.dependencies.push(this.naytify(symbol, tsSourceFile));
-        }
-
-        span.expression = this.naytify(span.expression, tsSourceFile);
-      });
-    } else if (node.kind === ts.SyntaxKind.BinaryExpression) {
-      const leftSymbol = Parser.typeChecker
-        .getSymbolAtLocation(node.left)
-        ?.getDeclarations()?.[0]?.parent?.parent as NaytiveNode;
-      const rightSymbol = Parser.typeChecker
-        .getSymbolAtLocation(node.right)
-        ?.getDeclarations()?.[0]?.parent?.parent as NaytiveNode;
-
-      if (leftSymbol) {
-        nodeInfo.dependencies.push(this.naytify(leftSymbol, tsSourceFile));
-      }
-
-      if (rightSymbol) {
-        nodeInfo.dependencies.push(this.naytify(rightSymbol, tsSourceFile));
-      }
-
-      // @ts-expect-error - left is readonly
-      node.left = this.naytify(node.left, tsSourceFile);
-      // @ts-expect-error - right is readonly
-      node.right = this.naytify(node.right, tsSourceFile);
-    } else if (node.kind === ts.SyntaxKind.PropertyAccessExpression) {
-      const symbol = Parser.typeChecker
-        .getSymbolAtLocation(node.expression)
-        ?.getDeclarations()?.[0]?.parent?.parent as NaytiveNode;
-
-      if (symbol) {
-        nodeInfo.symbol = this.naytify(symbol, tsSourceFile);
-        nodeInfo.dependencies.push(nodeInfo.symbol);
-      }
-
-      // @ts-expect-error - expression is readonly
-      node.expression = this.naytify(node.expression, tsSourceFile);
     } else if (node.kind === ts.SyntaxKind.ArrayLiteralExpression) {
       // @ts-expect-error - el is readonly
       node.elements.forEach((el) => {
         el = this.naytify(el, tsSourceFile);
       });
-    } else if (node.kind === ts.SyntaxKind.FunctionDeclaration) {
-      nodeInfo.type = Parser.getType(node, tsSourceFile);
-
-      node.body?.forEachChild((child) => {
-        child = this.naytify(child, tsSourceFile);
-      });
-    } else if (node.kind === ts.SyntaxKind.ArrowFunction) {
-      nodeInfo.type = Parser.getType(node, tsSourceFile);
-
-      node.body.forEachChild((child) => {
-        child = this.naytify(child, tsSourceFile);
-      });
-    } else if (node.kind === ts.SyntaxKind.IfStatement) {
-      node.thenStatement.forEachChild((child) => {
-        child = this.naytify(child, tsSourceFile);
-      });
-
-      if (node.elseStatement) {
-        node.elseStatement.forEachChild((child) => {
-          child = this.naytify(child, tsSourceFile);
-        });
-      }
-    } else if (node.kind === ts.SyntaxKind.WhileStatement) {
-      node.statement.forEachChild((child) => {
-        child = this.naytify(child, tsSourceFile);
-      });
-    } else if (node.kind === ts.SyntaxKind.ForStatement) {
-      node.statement.forEachChild((child) => {
-        child = this.naytify(child, tsSourceFile);
-      });
-    } else if (node.kind === ts.SyntaxKind.SwitchStatement) {
-      node.caseBlock.forEachChild((child) => {
-        child = this.naytify(child, tsSourceFile);
-      });
-    } else if (node.kind === ts.SyntaxKind.CaseClause) {
-      // @ts-expect-error - stmt is readonly
-      node.statements.forEach((stmt) => {
-        stmt = this.naytify(stmt, tsSourceFile);
-      });
-    } else if (node.kind === ts.SyntaxKind.DefaultClause) {
-      // @ts-expect-error - stmt is readonly
-      node.statements.forEach((stmt) => {
-        stmt = this.naytify(stmt, tsSourceFile);
-      });
-    } else if (node.kind === ts.SyntaxKind.ReturnStatement) {
-      const symbol = Parser.typeChecker
-        .getSymbolAtLocation(node.expression ?? node)
-        ?.getDeclarations()?.[0]?.parent?.parent as NaytiveNode;
-
-      if (node.expression) {
-        // @ts-expect-error - expression is readonly
-        node.expression = this.naytify(node.expression, tsSourceFile);
-      }
-
-      if (symbol) {
-        nodeInfo.symbol = this.naytify(symbol, tsSourceFile);
-        nodeInfo.dependencies.push(nodeInfo.symbol);
-      }
-    } else if (node.kind === ts.SyntaxKind.Identifier) {
-      const symbol = Parser.typeChecker
-        .getSymbolAtLocation(node)
-        ?.getDeclarations()?.[0]?.parent?.parent as NaytiveNode;
-
-      // if (symbol) {
-      //   nodeInfo.symbol = this.naytify(symbol, tsSourceFile);
-      //   nodeInfo.dependencies.push(nodeInfo.symbol);
-      // }
-
-      if (symbol) {
-        // @ts-expect-error - id is not a property of ts node
-        symbol.id ??= `${symbol.pos}-${symbol.end}`;
-        nodeInfo.symbol = symbol;
-        nodeInfo.dependencies.push(nodeInfo.symbol);
-
-        this.nodes[`${symbol?.pos}-${symbol?.end}`] ??= symbol;
-      }
     }
 
     (node as any).id ??= id;
