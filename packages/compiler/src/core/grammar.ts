@@ -41,115 +41,110 @@ export const libraries: Record<string, string> = {
 
 const grammar = new Map<ts.SyntaxKind | string, CompilerGrammar>();
 
-grammar.set(
-  ts.SyntaxKind.ImportDeclaration,
-  (node, { tsSourceFile, filePath }) => {
-    const importDeclaration = node as ImportDeclaration;
-    const moduleSpecifier =
-      importDeclaration.moduleSpecifier.getText(tsSourceFile);
-    const namedImports = importDeclaration.importClause?.namedBindings;
-    const importedFile = moduleSpecifier.replaceAll(/['"`]+/g, '');
-    const importedFilePath = path.join(
-      filePath!.replace(path.basename(filePath!), ''),
-      `${importedFile}${path.extname(importedFile) ? '' : '.ts'}`
-    );
+grammar.set(ts.SyntaxKind.ImportDeclaration, (node, options) => {
+  const importDeclaration = node as ImportDeclaration;
+  const moduleSpecifier = importDeclaration.moduleSpecifier.getText(
+    node.getSourceFile()
+  );
+  const namedImports = importDeclaration.importClause?.namedBindings;
+  const importedFile = moduleSpecifier.replaceAll(/['"`]+/g, '');
+  const importedFilePath = path.join(
+    options!.filePath!.replace(path.basename(options!.filePath!), ''),
+    `${importedFile}${path.extname(importedFile) ? '' : '.ts'}`
+  );
 
-    if (importedFile.startsWith('@naytive/')) {
-      if (namedImports) {
-        const imports = namedImports as ts.NamedImports;
-        const importClause = imports.elements.map(
-          (element) => element.name.text
+  if (importedFile.startsWith('@naytive/')) {
+    if (namedImports) {
+      const imports = namedImports as ts.NamedImports;
+      const importClause = imports.elements.map((element) => element.name.text);
+
+      // if import is a naytive type or library, remove the import because naytive types are built-in C/C++ types
+      importClause.forEach((imported) => {
+        if (libraries[imported]) {
+          Parser.addLibrary(`#include <${libraries[imported]}>`);
+        }
+      });
+    }
+  } else {
+    // if file is local
+    if (importedFile.startsWith('.')) {
+      if (!fs.existsSync(importedFilePath)) {
+        throw new Error(
+          colors.red(
+            `File ${path.basename(
+              importedFilePath
+            )} does not exist in ${path.dirname(importedFilePath)}`
+          )
+        );
+      }
+
+      // if modulespecifier is a local file, parse the file and add the parsed code
+      if (importedFilePath.endsWith('.ts')) {
+        Parser.addModule(importedFile, Parser.parse(importedFilePath, false));
+
+        return '';
+      } else {
+        fs.copyFileSync(
+          importedFilePath,
+          path.join(
+            (Parser.config() as CompilerConfig).appDir,
+            (Parser.config() as CompilerConfig).output,
+            importedFile
+          )
         );
 
-        // if import is a naytive type or library, remove the import because naytive types are built-in C/C++ types
-        importClause.forEach((imported) => {
-          if (libraries[imported]) {
-            Parser.addLibrary(`#include <${libraries[imported]}>`);
-          }
-        });
-      }
-    } else {
-      // if file is local
-      if (importedFile.startsWith('.')) {
-        if (!fs.existsSync(importedFilePath)) {
-          throw new Error(
-            colors.red(
-              `File ${path.basename(
-                importedFilePath
-              )} does not exist in ${path.dirname(importedFilePath)}`
-            )
-          );
-        }
+        if (path.extname(importedFile) === '.h') {
+          const cppFilePath = importedFilePath.replace('.h', '.cpp');
 
-        // if modulespecifier is a local file, parse the file and add the parsed code
-        if (importedFilePath.endsWith('.ts')) {
-          return Parser.parse(importedFilePath);
-        } else {
-          fs.copyFileSync(
-            importedFilePath,
-            path.join(
-              (Parser.config() as CompilerConfig).appDir,
-              (Parser.config() as CompilerConfig).output,
-              importedFile
-            )
-          );
-
-          if (path.extname(importedFile) === '.h') {
-            const cppFilePath = importedFilePath.replace('.h', '.cpp');
-
-            if (fs.existsSync(cppFilePath)) {
-              fs.copyFileSync(
-                cppFilePath,
-                path.join(
-                  (Parser.config() as CompilerConfig).appDir,
-                  (Parser.config() as CompilerConfig).output,
-                  importedFile.replace(
-                    '.h',
-                    (Parser.config() as CompilerConfig).compileType
-                  )
+          if (fs.existsSync(cppFilePath)) {
+            fs.copyFileSync(
+              cppFilePath,
+              path.join(
+                (Parser.config() as CompilerConfig).appDir,
+                (Parser.config() as CompilerConfig).output,
+                importedFile.replace(
+                  '.h',
+                  (Parser.config() as CompilerConfig).compileType
                 )
-              );
-            }
+              )
+            );
           }
         }
       }
-
-      // C/C++ libraries and files can be loaded with this
-      Parser.addImport(`#include ${moduleSpecifier.replace(/['"`]+/g, '"')}`);
     }
 
-    return '';
+    // C/C++ libraries and files can be loaded with this
+    Parser.addImport(`#include ${moduleSpecifier.replace(/['"`]+/g, '"')}`);
   }
-);
 
-grammar.set(ts.SyntaxKind.DeclareKeyword, (node, { tsSourceFile }) => {
+  return '';
+});
+
+grammar.set(ts.SyntaxKind.DeclareKeyword, (node) => {
   return `#define ${node
-    .getText(tsSourceFile)
+    .getText(node.getSourceFile())
     .replace(/^declare\s*(\s*(const|let|var)\s*)/, '')
     .replace(/\s*=\s*/, ' ')
     .replace(';', '')}`;
 });
 
-grammar.set(ts.SyntaxKind.FirstStatement, (node, { tsSourceFile }) => {
-  return grammar.get(ts.SyntaxKind.ExpressionStatement)!(node, {
-    tsSourceFile,
-  });
+grammar.set(ts.SyntaxKind.FirstStatement, (node) => {
+  return grammar.get(ts.SyntaxKind.ExpressionStatement)!(node);
 });
 
-grammar.set(ts.SyntaxKind.VariableDeclaration, (node, { tsSourceFile }) => {
+grammar.set(ts.SyntaxKind.VariableDeclaration, (node) => {
+  const tsSourceFile = node.getSourceFile();
   const variable = node as VariableDeclaration;
 
   const isRoot =
+    // @ts-expect-error overload for config() not created
     (Parser.hasMain || Parser.config().compileType === '.ino') &&
     variable?.parent?.parent?.parent?.kind === ts.SyntaxKind.SourceFile;
 
   let variableName = variable.name.getText(tsSourceFile);
   let variableType = variable?.naytive?.type;
 
-  let variableValue = Parser.parseNode(
-    variable.initializer! as any,
-    tsSourceFile
-  );
+  let variableValue = Parser.parseNode(variable.initializer! as any);
 
   if (variable.initializer?.kind === ts.SyntaxKind.ArrowFunction) {
     const arrowFunction = variable.initializer as ArrowFunction;
@@ -161,25 +156,17 @@ grammar.set(ts.SyntaxKind.VariableDeclaration, (node, { tsSourceFile }) => {
         ? 'int'
         : variableType || arrowFunction.naytive?.type || 'auto';
 
-    console.log(
-      variable?.naytive,
-      arrowFunction.naytive,
-      variable?.getText(variable?.getSourceFile()),
-      'scoped'
-    );
-
     if (!isRoot) {
       return `${
         functionType === 'void' ? 'auto' : functionType
       } ${variableName} = [](${functionArguments}) {${Parser.parseNode(
-        arrowFunction.body! as any,
-        tsSourceFile
+        arrowFunction.body! as any
       )}}`;
     }
 
     return `${functionType} ${variableName}(${functionArguments}) {\n${
       (arrowFunction.body?.kind !== ts.SyntaxKind.Block ? 'return ' : '') +
-      Parser.parseNode(arrowFunction.body! as any, tsSourceFile)
+      Parser.parseNode(arrowFunction.body! as any)
     };\n}`;
   }
 
@@ -190,8 +177,8 @@ grammar.set(ts.SyntaxKind.VariableDeclaration, (node, { tsSourceFile }) => {
       stdInPrompt ? `std::cout << ${stdInPrompt};\n` : ''
     }\n${variableValue
       .replace(stdInPrompt || '', '')
-      .replace(/std\::cin\((.*)\)/, `std::cin >> ${variableName}`)
-      .replace(/alert\((.*)\)/, `std::cin >> ${variableName}`)}`;
+      .replace(/std\::cin\((.*)\)/, `std::getline(std::cin, ${variableName})`)
+      .replace(/alert\((.*)\)/, `std::getline(std::cin, ${variableName})`)}`;
   }
 
   if (variable.initializer?.kind === ts.SyntaxKind.ArrayLiteralExpression) {
@@ -210,99 +197,79 @@ grammar.set(ts.SyntaxKind.VariableDeclaration, (node, { tsSourceFile }) => {
   )} = ${variableValue}`;
 });
 
-grammar.set(ts.SyntaxKind.VariableDeclarationList, (node, { tsSourceFile }) => {
+grammar.set(ts.SyntaxKind.VariableDeclarationList, (node) => {
   const variableDeclarationList = node as VariableDeclarationList;
   const variableDeclaration = variableDeclarationList.declarations[0];
 
   return grammar.get(ts.SyntaxKind.VariableDeclaration)!(
-    variableDeclaration as any,
-    {
-      tsSourceFile,
-    }
+    variableDeclaration as any
   );
 });
 
-grammar.set(ts.SyntaxKind.VariableStatement, (node, { tsSourceFile }) => {
+grammar.set(ts.SyntaxKind.VariableStatement, (node) => {
   const variableStatement = node as VariableStatement;
   const variableDeclaration = variableStatement.declarationList.declarations[0];
 
   return `${grammar.get(ts.SyntaxKind.VariableDeclaration)!(
-    variableDeclaration as any,
-    {
-      tsSourceFile,
-    }
+    variableDeclaration as any
   )};`;
 });
 
-grammar.set(
-  ts.SyntaxKind.PropertyAccessExpression,
-  (node, { tsSourceFile }) => {
-    const propertyAccessExpression = node as PropertyAccessExpression;
+grammar.set(ts.SyntaxKind.PropertyAccessExpression, (node) => {
+  const tsSourceFile = node.getSourceFile();
+  const propertyAccessExpression = node as PropertyAccessExpression;
 
-    const name = propertyAccessExpression.name.getText(tsSourceFile);
-    const expression =
-      propertyAccessExpression.expression.getText(tsSourceFile);
+  const name = propertyAccessExpression.name.getText(tsSourceFile);
+  const expression = propertyAccessExpression.expression.getText(tsSourceFile);
 
-    if (name === 'length') {
-      return `${expression}.size()`;
-    }
-
-    if (name === 'toUpperCase') {
-      Parser.addNaytiveLib('str_to_upper');
-      Parser.addLibrary('#include <string>');
-
-      return `str_to_upper(${expression})`;
-    }
-
-    if (name === 'toLowerCase') {
-      Parser.addNaytiveLib('str_to_lower');
-
-      return `str_to_lower(${expression})`;
-    }
-
-    if (name === 'replace') {
-      Parser.addNaytiveLib('str_replace');
-
-      return `str_replace(${expression})`;
-    }
-
-    if (name === 'split') {
-      Parser.addNaytiveLib('str_to_array');
-
-      return `str_to_array(${expression})`;
-    }
-
-    if (name === 'toString') {
-      Parser.addLibrary('#include <string>');
-
-      return `std::to_string(${expression})`;
-    }
-
-    if (name === 'forEach') {
-      return `for (int i = 0; i < ${expression}.size(); i++)`;
-    }
-
-    return `${expression}.${name}`;
+  if (name === 'length') {
+    return `${expression}.size()`;
   }
-);
 
-grammar.set(ts.SyntaxKind.ExpressionStatement, (node, { tsSourceFile }) => {
+  if (name === 'toUpperCase') {
+    Parser.addNaytiveLib('str_to_upper');
+    Parser.addLibrary('#include <string>');
+
+    return `str_to_upper(${expression})`;
+  }
+
+  if (name === 'toLowerCase') {
+    Parser.addNaytiveLib('str_to_lower');
+
+    return `str_to_lower(${expression})`;
+  }
+
+  if (name === 'split') {
+    Parser.addNaytiveLib('str_to_array');
+
+    return `str_to_array(${expression})`;
+  }
+
+  if (name === 'toString') {
+    Parser.addLibrary('#include <string>');
+
+    return `std::to_string(${expression})`;
+  }
+
+  if (name === 'forEach') {
+    return `for (int i = 0; i < ${expression}.size(); i++)`;
+  }
+
+  return `${expression}.${name}`;
+});
+
+grammar.set(ts.SyntaxKind.ExpressionStatement, (node) => {
   const expressionStatement = node as ExpressionStatement;
 
-  return `${Parser.parseNode(
-    expressionStatement.expression as any,
-    tsSourceFile
-  )};`;
+  return `${Parser.parseNode(expressionStatement.expression as any)};`;
 });
 
-grammar.set(ts.SyntaxKind.CallExpression, (node, { tsSourceFile }) => {
+grammar.set(ts.SyntaxKind.CallExpression, (node) => {
+  const tsSourceFile = node.getSourceFile();
   const callExpression = node as CallExpression;
-  const expression = Parser.parseNode(
-    callExpression.expression as any,
-    tsSourceFile
-  );
+  const expression = Parser.parseNode(callExpression.expression as any);
   const args = callExpression.arguments.map((arg) =>
-    Parser.parseNode(arg as any, tsSourceFile)
+    Parser.parseNode(arg as any)
   );
 
   if (callExpression.expression.getText(tsSourceFile).includes('.forEach')) {
@@ -330,8 +297,7 @@ grammar.set(ts.SyntaxKind.CallExpression, (node, { tsSourceFile }) => {
     }
 
     return `${expression} {\n${loopVariables}\n${Parser.parseNode(
-      forEachFunction.body! as any,
-      tsSourceFile
+      forEachFunction.body! as any
     )}}`;
   }
 
@@ -340,7 +306,15 @@ grammar.set(ts.SyntaxKind.CallExpression, (node, { tsSourceFile }) => {
   ) {
     // check if expression is a defined library function
     if (!!grammar.get(expression)) {
-      return grammar.get(expression)!(callExpression, { tsSourceFile });
+      return grammar.get(expression)!(callExpression);
+    }
+
+    if (expression.endsWith('.replace')) {
+      Parser.addNaytiveLib('str_replace');
+
+      return `str_replace(${(
+        callExpression.expression as PropertyAccessExpression
+      ).expression.getText(tsSourceFile)}, ${args.join(', ')})`;
     }
 
     if (expression.endsWith('.dereference')) {
@@ -365,13 +339,14 @@ grammar.set(ts.SyntaxKind.CallExpression, (node, { tsSourceFile }) => {
   return `${expression}(${args.join(', ')})`;
 });
 
-grammar.set(ts.SyntaxKind.TemplateExpression, (node, { tsSourceFile }) => {
+grammar.set(ts.SyntaxKind.TemplateExpression, (node) => {
+  const tsSourceFile = node.getSourceFile();
   const templateExpression = node as TemplateExpression;
 
   Parser.addLibrary('#include <string>');
 
   const parsedTemplateSpans = templateExpression.templateSpans.map((span) =>
-    Parser.parseNode(span.expression as any, tsSourceFile)
+    Parser.parseNode(span.expression as any)
   );
 
   return templateExpression
@@ -391,8 +366,8 @@ grammar.set(ts.SyntaxKind.TemplateExpression, (node, { tsSourceFile }) => {
     .replace(/`([^`]+)`/g, '"$1"');
 });
 
-grammar.set(ts.SyntaxKind.FirstTemplateToken, (node, { tsSourceFile }) => {
-  return grammar.get(ts.SyntaxKind.StringLiteral)!(node, { tsSourceFile });
+grammar.set(ts.SyntaxKind.FirstTemplateToken, (node) => {
+  return grammar.get(ts.SyntaxKind.StringLiteral)!(node);
 });
 
 grammar.set(ts.SyntaxKind.StringLiteral, (node) => {
@@ -403,23 +378,24 @@ grammar.set(ts.SyntaxKind.StringLiteral, (node) => {
   return JSON.stringify(stringLiteral.text);
 });
 
-grammar.set(ts.SyntaxKind.ArrayLiteralExpression, (node, { tsSourceFile }) => {
+grammar.set(ts.SyntaxKind.ArrayLiteralExpression, (node) => {
   const arrayLiteralExpression = node as ArrayLiteralExpression;
   const elements = arrayLiteralExpression.elements.map((element) =>
-    Parser.parseNode(element as any, tsSourceFile)
+    Parser.parseNode(element as any)
   );
 
   return `{${elements.join(', ')}}`;
 });
 
-grammar.set(ts.SyntaxKind.BinaryExpression, (node, { tsSourceFile }) => {
+grammar.set(ts.SyntaxKind.BinaryExpression, (node) => {
+  const tsSourceFile = node.getSourceFile();
   const binaryExpression = node as BinaryExpression;
-  const left = Parser.parseNode(binaryExpression.left as any, tsSourceFile);
+
+  const left = Parser.parseNode(binaryExpression.left as any);
+  const right = Parser.parseNode(binaryExpression.right as any);
   const operator = binaryExpression.operatorToken.getText(tsSourceFile);
 
-  let right = Parser.parseNode(binaryExpression.right as any, tsSourceFile);
-
-  if (right?.startsWith('std.cin')) {
+  if (right?.startsWith('std::cin')) {
     const stdInPrompt = right.match(/(?<=\()(.*)(?=\))/)?.[0];
 
     return `${
@@ -428,14 +404,16 @@ grammar.set(ts.SyntaxKind.BinaryExpression, (node, { tsSourceFile }) => {
             .replace(/'(.*)'/, '"$1"')
             .replace(/`(.*)`/, '"$1"')};\n`
         : ''
-    }\nstd::cin >> ${left};`;
+    }\nstd::getline(std::cin,${left});`;
   }
 
   return `${left} ${operator} ${right}`;
 });
 
-grammar.set(ts.SyntaxKind.FunctionDeclaration, (node, { tsSourceFile }) => {
+grammar.set(ts.SyntaxKind.FunctionDeclaration, (node) => {
+  const tsSourceFile = node.getSourceFile();
   const functionDeclaration = node as FunctionDeclaration;
+
   const functionType = functionDeclaration.naytive?.type;
   const functionName = functionDeclaration.name?.getText(tsSourceFile);
   const functionArguments = functionDeclaration.parameters
@@ -443,16 +421,10 @@ grammar.set(ts.SyntaxKind.FunctionDeclaration, (node, { tsSourceFile }) => {
     .join(', ');
 
   const isRoot =
+    // @ts-expect-error overload for config() not created
     (Parser.hasMain || Parser.config().compileType === '.ino') &&
     functionDeclaration?.parent?.kind ===
       (ts.SyntaxKind.SourceFile || undefined);
-
-  console.log(
-    isRoot,
-    functionType,
-    ts.SyntaxKind[functionDeclaration?.parent?.kind],
-    functionDeclaration?.getText(tsSourceFile)
-  );
 
   if (!isRoot) {
     const dependencies = Lexer.findNodeDependencies(functionDeclaration);
@@ -462,18 +434,17 @@ grammar.set(ts.SyntaxKind.FunctionDeclaration, (node, { tsSourceFile }) => {
     } ${functionName} = [${dependencies.join(
       ', '
     )}](${functionArguments}) {${Parser.parseNode(
-      functionDeclaration.body! as any,
-      tsSourceFile
+      functionDeclaration.body! as any
     )}}`;
   }
 
   return `${functionType} ${functionName}(${functionArguments}) {\n${Parser.parseNode(
-    functionDeclaration.body! as any,
-    tsSourceFile
+    functionDeclaration.body! as any
   )}\n}`;
 });
 
-grammar.set(ts.SyntaxKind.ArrowFunction, (node, { tsSourceFile }) => {
+grammar.set(ts.SyntaxKind.ArrowFunction, (node) => {
+  const tsSourceFile = node.getSourceFile();
   const variable = node as VariableStatement;
   const variableDeclaration = variable.declarationList?.declarations?.[0];
 
@@ -489,12 +460,12 @@ grammar.set(ts.SyntaxKind.ArrowFunction, (node, { tsSourceFile }) => {
 
   if (!functionName) {
     return `[](${functionArguments}) {${Parser.parseNode(
-      arrowFunction.body! as any,
-      tsSourceFile
+      arrowFunction.body! as any
     )}}`;
   }
 
   const isRoot =
+    // @ts-expect-error overload for config() not created
     (Parser.hasMain || Parser.config().compileType === '.ino') &&
     arrowFunction?.parent?.parent?.parent?.kind === ts.SyntaxKind.SourceFile;
 
@@ -506,43 +477,35 @@ grammar.set(ts.SyntaxKind.ArrowFunction, (node, { tsSourceFile }) => {
     } ${functionName} = [${dependencies.join(
       ', '
     )}](${functionArguments}) {${Parser.parseNode(
-      arrowFunction.body! as any,
-      tsSourceFile
+      arrowFunction.body! as any
     )}}`;
   }
 
   return `${functionType} ${functionName}(${functionArguments}) {\n${Parser.parseNode(
-    arrowFunction.body! as any,
-    tsSourceFile
+    arrowFunction.body! as any
   )}\n}`;
 });
 
-grammar.set(ts.SyntaxKind.Block, (node, { tsSourceFile, filePath }) => {
+grammar.set(ts.SyntaxKind.Block, (node, options) => {
   const block = node as Block;
   const parsedCode: string[] = [];
 
   block.statements.forEach((statement: any) => {
-    parsedCode.push(Parser.parseNode(statement, tsSourceFile, filePath));
+    parsedCode.push(Parser.parseNode(statement, options?.filePath));
   });
 
   return parsedCode.join('\n\n');
 });
 
-grammar.set(ts.SyntaxKind.IfStatement, (node, { tsSourceFile }) => {
+grammar.set(ts.SyntaxKind.IfStatement, (node) => {
   const ifStatement = node as IfStatement;
 
-  const condition = Parser.parseNode(
-    ifStatement.expression as any,
-    tsSourceFile
-  );
+  const condition = Parser.parseNode(ifStatement.expression as any);
 
-  const thenStatement = Parser.parseNode(
-    ifStatement.thenStatement as any,
-    tsSourceFile
-  );
+  const thenStatement = Parser.parseNode(ifStatement.thenStatement as any);
 
   const elseStatement = ifStatement.elseStatement
-    ? Parser.parseNode(ifStatement.elseStatement as any, tsSourceFile)
+    ? Parser.parseNode(ifStatement.elseStatement as any)
     : '';
 
   return `if (${condition}) {\n${thenStatement}\n} ${
@@ -550,83 +513,68 @@ grammar.set(ts.SyntaxKind.IfStatement, (node, { tsSourceFile }) => {
   }`;
 });
 
-grammar.set(ts.SyntaxKind.ForStatement, (node, { tsSourceFile }) => {
+grammar.set(ts.SyntaxKind.ForStatement, (node) => {
   const forStatement = node as ForStatement;
 
-  const initializer = Parser.parseNode(
-    forStatement.initializer! as any,
-    tsSourceFile
-  );
-  const condition = Parser.parseNode(
-    forStatement.condition! as any,
-    tsSourceFile
-  );
-  const incrementor = Parser.parseNode(
-    forStatement.incrementor! as any,
-    tsSourceFile
-  );
-  const statement = Parser.parseNode(
-    forStatement.statement as any,
-    tsSourceFile
-  );
+  const initializer = Parser.parseNode(forStatement.initializer! as any);
+  const condition = Parser.parseNode(forStatement.condition! as any);
+  const incrementor = Parser.parseNode(forStatement.incrementor! as any);
+  const statement = Parser.parseNode(forStatement.statement as any);
 
   return `for (${initializer}; ${condition}; ${incrementor}) {\n${statement}\n}`;
 });
 
-grammar.set(ts.SyntaxKind.TypeOfExpression, (node, { tsSourceFile }) => {
+grammar.set(ts.SyntaxKind.TypeOfExpression, (node) => {
   const typeOfExpression = node as TypeOfExpression;
 
   return `typeid(${Parser.parseNode(
-    typeOfExpression.expression as any,
-    tsSourceFile
+    typeOfExpression.expression as any
   )}).name()`;
 });
 
-grammar.set(ts.SyntaxKind.ReturnStatement, (node, { tsSourceFile }) => {
+grammar.set(ts.SyntaxKind.ReturnStatement, (node) => {
   const returnStatement = node as unknown as ts.ReturnStatement;
 
-  return `return ${Parser.parseNode(
-    returnStatement.expression as any,
-    tsSourceFile
-  )}`;
+  return `return ${Parser.parseNode(returnStatement.expression as any)};`;
 });
 
 // JAVASCRIPT/NAYTIVE LIBRARY GRAMMAR
 
-grammar.set('std.cout', (node, { tsSourceFile }) => {
+grammar.set('std.cout', (node) => {
   const cout = node as CallExpression;
   const values = cout.arguments
-    .map((arg) => Parser.parseNode(arg as any, tsSourceFile))
+    .map((arg) => Parser.parseNode(arg as any))
     .join(' << ');
 
   return `std::cout << ${values.replace(/\s*\+\s*/g, ' << ')}`;
 });
 
-grammar.set('console.log', (node, { tsSourceFile }) => {
+grammar.set('console.log', (node) => {
   const cout = node as CallExpression;
   const values = cout.arguments
-    .map((arg) => Parser.parseNode(arg as any, tsSourceFile))
+    .map((arg) => Parser.parseNode(arg as any))
     .join(' << ');
 
   return `std::cout << ${values.replace(/\s*\+\s*/g, ' << ')}`;
 });
 
-grammar.set('memory.pointer', (node, { tsSourceFile }) => {
+grammar.set('memory.pointer', (node) => {
   const pointer = node as CallExpression;
-  const pointerValue = Parser.parseNode(
-    pointer.arguments[0] as any,
-    tsSourceFile
-  );
+  const pointerValue = Parser.parseNode(pointer.arguments[0] as any);
 
   return `&${pointerValue}`;
 });
 
-grammar.set('memory.dereference', (node, { tsSourceFile }) => {
+grammar.set('memory.unsafe', (node) => {
+  const pointer = node as CallExpression;
+  const pointerValue = Parser.parseNode(pointer.arguments[0] as any);
+
+  return `&${pointerValue}`;
+});
+
+grammar.set('memory.dereference', (node) => {
   const dereference = node as CallExpression;
-  const dereferenceValue = Parser.parseNode(
-    dereference.arguments[0] as any,
-    tsSourceFile
-  );
+  const dereferenceValue = Parser.parseNode(dereference.arguments[0] as any);
 
   return `*${dereferenceValue}`;
 });

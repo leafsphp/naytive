@@ -11,7 +11,7 @@ export default function main(): int {
   std.cout(`${first_name.toUpperCase()}\n`);
   std.cout(`${first_name.toLowerCase()}\n`);
   std.cout(`${first_name[0]}\n`);
-  // std.cout(`${first_name.replace('John', 'Doe')}\n`);
+  std.cout(`${first_name.replace('John', 'Doe')}\n`);
 
   return 0;
 }

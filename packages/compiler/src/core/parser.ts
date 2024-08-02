@@ -1,3 +1,4 @@
+import fs from 'fs';
 import path from 'path';
 import colors from 'colors';
 import * as ts from 'typescript';
@@ -14,13 +15,14 @@ export default class Parser {
   protected static _libraries: string[] = [];
   protected static _hasMain: boolean = false;
   protected static _naytive_libs: string[] = [];
+  protected static _modules: Record<string, string> = {};
   protected static _c_functions: Record<string, string> = {};
   protected static _app_functions: Record<string, string> = {};
 
   protected static sourceFile: ts.SourceFile;
   protected static _typeChecker: ts.TypeChecker;
 
-  protected static getTsSourceFile(filePath: string): ts.SourceFile {
+  public static getTsSourceFile(filePath: string): ts.SourceFile {
     const program = ts.createProgram([filePath], { allowJs: false });
     const sourceFile = program.getSourceFile(filePath)!;
 
@@ -60,7 +62,35 @@ export default class Parser {
   public static addNaytiveLib(name: string): void {
     if (!this._naytive_libs.includes(name)) {
       this._naytive_libs.push(name);
+
+      fs.copyFileSync(
+        path.join(
+          __dirname,
+          `../src/clib/${name}.h`
+        ),
+        path.join(
+          (Parser.config() as CompilerConfig).appDir,
+          (Parser.config() as CompilerConfig).output,
+          `${name}.h`
+        )
+      );
+
+      fs.copyFileSync(
+        path.join(__dirname, `../src/clib/${name}.cpp`),
+        path.join(
+          (Parser.config() as CompilerConfig).appDir,
+          (Parser.config() as CompilerConfig).output,
+          `${name}.cpp`
+        )
+      );
+
       this.addLibrary(`#include "${name}.h"`);
+    }
+  }
+
+  public static addModule(name: string, fn: string): void {
+    if (!this._modules[name]) {
+      this._modules[name] = fn;
     }
   }
 
@@ -75,6 +105,7 @@ export default class Parser {
       ...this._libraries,
       ...Object.values(this._c_functions),
       ...this._imports,
+      ...Object.values(this._modules),
       ...Object.values(this._app_functions),
     ];
   }
@@ -91,7 +122,7 @@ export default class Parser {
     return this._typeChecker;
   }
 
-  public static parse(filePath: string): string {
+  public static parse(filePath: string, root = true): string {
     const parsedCode: string[] = [];
     const tsSourceFile =
       path.extname(filePath) === '.ts'
@@ -104,76 +135,79 @@ export default class Parser {
           );
 
     this.sourceFile = tsSourceFile;
+    this._hasMain =
+      root === false ||
+      this.hasMainFunction(tsSourceFile) ||
+      this._config.compileType === '.ino';
 
-    const hasMainFunction = () => {
-      const isFunction = (node: ts.Node) => {
-        const response: { name?: string; body?: ts.Node } = {};
-
-        if (node.kind === ts.SyntaxKind.FunctionDeclaration) {
-          const fn = node as ts.FunctionDeclaration;
-
-          response.name = fn.name?.getText(tsSourceFile);
-          response.body = fn.body;
-        } else if (node.kind === ts.SyntaxKind.VariableDeclaration) {
-          const variable = node as ts.VariableDeclaration;
-
-          if (variable.initializer?.kind === ts.SyntaxKind.ArrowFunction) {
-            const arrowFn = variable.initializer as ts.ArrowFunction;
-
-            response.name = variable.name.getText(tsSourceFile);
-            response.body = arrowFn.body;
-          }
-        } else if (node.kind === ts.SyntaxKind.VariableStatement) {
-          const variable = node as ts.VariableStatement;
-
-          if (
-            variable.declarationList.declarations[0].initializer?.kind ===
-            ts.SyntaxKind.ArrowFunction
-          ) {
-            const arrowFn = variable.declarationList.declarations[0]
-              .initializer as ts.ArrowFunction;
-
-            response.name =
-              variable.declarationList.declarations[0].name.getText(
-                tsSourceFile
-              );
-            response.body = arrowFn.body;
-          }
-        }
-
-        return response;
-      };
-
-      tsSourceFile.forEachChild((node) => {
-        const fn = isFunction(node);
-
-        if (fn.name === 'main') {
-          this._hasMain = true;
-        }
-      });
-
-      return this._hasMain;
-    };
-
-    const nodes = Lexer.naytify(tsSourceFile, tsSourceFile);
+    const nodes = Lexer.naytify(tsSourceFile);
 
     nodes.forEachChild((node) => {
-      parsedCode.push(
-        this.parseNode(node as NaytiveNode, tsSourceFile, filePath)
-      );
+      parsedCode.push(this.parseNode(node as NaytiveNode, filePath));
     });
 
-    return hasMainFunction() || this._config.compileType === '.ino'
-      ? parsedCode.join('\n')
-      : `\nint main() {${parsedCode.join('\n')} return 0;\n}`;
+    if (root) {
+      return this._hasMain
+        ? parsedCode.join('\n')
+        : `\nint main() {${parsedCode.join('\n')} return 0;\n}`;
+    }
+
+    return parsedCode.join('\n');
   }
 
-  public static parseNode(
-    node: NaytiveNode,
-    tsSourceFile: ts.SourceFile,
-    filePath?: string
-  ): string {
+  protected static hasMainFunction(tsSourceFile: ts.SourceFile): boolean {
+    let hasMain = false;
+
+    const isFunction = (node: ts.Node) => {
+      const response: { name?: string; body?: ts.Node } = {};
+
+      if (node.kind === ts.SyntaxKind.FunctionDeclaration) {
+        const fn = node as ts.FunctionDeclaration;
+
+        response.name = fn.name?.getText(tsSourceFile);
+        response.body = fn.body;
+      } else if (node.kind === ts.SyntaxKind.VariableDeclaration) {
+        const variable = node as ts.VariableDeclaration;
+
+        if (variable.initializer?.kind === ts.SyntaxKind.ArrowFunction) {
+          const arrowFn = variable.initializer as ts.ArrowFunction;
+
+          response.name = variable.name.getText(tsSourceFile);
+          response.body = arrowFn.body;
+        }
+      } else if (node.kind === ts.SyntaxKind.VariableStatement) {
+        const variable = node as ts.VariableStatement;
+
+        if (
+          variable.declarationList.declarations[0].initializer?.kind ===
+          ts.SyntaxKind.ArrowFunction
+        ) {
+          const arrowFn = variable.declarationList.declarations[0]
+            .initializer as ts.ArrowFunction;
+
+          response.name =
+            variable.declarationList.declarations[0].name.getText(tsSourceFile);
+          response.body = arrowFn.body;
+        }
+      }
+
+      return response;
+    };
+
+    tsSourceFile.forEachChild((node) => {
+      const fn = isFunction(node);
+
+      if (fn.name === 'main') {
+        hasMain = true;
+      }
+    });
+
+    return hasMain;
+  }
+
+  public static parseNode(node: NaytiveNode, filePath?: string): string {
     let parsedCode: string[] = [];
+    const tsSourceFile = node.getSourceFile();
 
     if (this._config.debug) {
       console.log(
@@ -186,14 +220,12 @@ export default class Parser {
     if (node.getText(tsSourceFile).startsWith('declare')) {
       parsedCode.push(
         grammar.get(ts.SyntaxKind.DeclareKeyword)!(node, {
-          tsSourceFile,
           filePath,
         })
       );
     } else if (grammar.get(node.kind)) {
       parsedCode.push(
         grammar.get(node.kind)!(node, {
-          tsSourceFile,
           filePath,
         })
       );
@@ -205,12 +237,18 @@ export default class Parser {
   }
 
   public static parseTypes(type?: string, varValue?: any): string {
-    if (!type) {
+    if (!type || type === 'any') {
       return 'auto';
     }
 
-    if (type.startsWith('() =>')) {
-      const returnType = type.replace('() => ', '').replace('()=>', '');
+    // will fix this later
+    if (['int', 'short', 'long', 'float', 'double'].includes(type)) {
+      return type;
+    }
+
+    if (/\(\s*(?:[^()]*|(?:\([^()]*\)))*\s*\)\s*=>/.test(type)) {
+      const returnType = type
+        .replace(/\(\s*(?:[^()]*|(?:\([^()]*\)))*\s*\)\s*=>\s*/, '');
       const returnStatement = varValue
         ?.match(/return\s+([^;]+);/)?.[1]
         ?.trim?.();
@@ -321,7 +359,8 @@ export default class Parser {
     return type;
   }
 
-  public static getType(node: any, tsSourceFile: ts.SourceFile): string {
+  public static getType(node: any): string {
+    const tsSourceFile = node.getSourceFile();
     const symbol = Parser.typeChecker
       .getSymbolAtLocation(node)
       ?.getDeclarations()?.[0] as any;
@@ -345,7 +384,7 @@ export default class Parser {
     sourceFile?: ts.SourceFile
   ): string {
     const variableName = variable.name.getText(sourceFile);
-    const variableType = this.getType(variable, sourceFile!);
+    const variableType = this.getType(variable);
 
     return `${variableType} ${variableName}`;
   }

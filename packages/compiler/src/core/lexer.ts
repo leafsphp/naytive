@@ -30,14 +30,13 @@ import type {
  */
 export default class Lexer {
   public static naytify(
-    node: ts.Node,
-    tsSourceFile: ts.SourceFile
+    node: ts.Node
   ): NaytiveNode {
     const id = `${node.pos}-${node.end}`;
 
     if (node.getChildren().length > 0) {
       node.forEachChild((child) => {
-        child = this.naytify(child, tsSourceFile);
+        child = this.naytify(child);
       });
     }
 
@@ -59,32 +58,27 @@ export default class Lexer {
           ?.getDeclarations()?.[0]?.parent?.parent as NaytiveNode;
 
         if (symbol) {
-          nodeInfo.symbol = this.naytify(symbol, tsSourceFile);
+          nodeInfo.symbol = this.naytify(symbol);
           nodeInfo.dependencies.push(nodeInfo.symbol);
         }
 
-        nodeInfo.initialValue = variableDeclaration.initializer.getText(tsSourceFile);
+        nodeInfo.initialValue = variableDeclaration.initializer.getText(node.getSourceFile());
         nodeInfo.type = Parser.getType(
           variableDeclaration.initializer?.kind === ts.SyntaxKind.Identifier
             ? variableDeclaration.initializer
-            : node,
-          tsSourceFile
+            : variableDeclaration
         );
 
         // @ts-expect-error - initializer is readonly
-        variableDeclaration.initializer = this.naytify(variableDeclaration.initializer, tsSourceFile);
+        variableDeclaration.initializer = this.naytify(variableDeclaration.initializer);
       }
-    } else if (node.kind === ts.SyntaxKind.Block) {
-      node.forEachChild((child) => {
-        child = this.naytify(child, tsSourceFile);
-      });
     } else if (node.kind === ts.SyntaxKind.FunctionDeclaration) {
       const functionDeclaration = node as ts.FunctionDeclaration;
 
-      nodeInfo.type = Parser.getType(functionDeclaration, tsSourceFile);
+      nodeInfo.type = Parser.getType(functionDeclaration);
 
       // @ts-expect-error - body is readonly
-      functionDeclaration.body = this.naytify(functionDeclaration.body!, tsSourceFile);
+      functionDeclaration.body = this.naytify(functionDeclaration.body!);
     }
 
     (node as any).id ??= id;

@@ -1,9 +1,9 @@
 import { std } from '@naytive/core';
 import { int } from '@naytive/types';
 
-const first_name: string = std.cin('Enter your first name: ');
-
 export default function main(): int {
+  const first_name: string = std.cin('Enter your first name: ');
+
   std.cout(`Hello, ${first_name}!\n`);
 
   console.log('You can also use console.log to print to the console.\n');

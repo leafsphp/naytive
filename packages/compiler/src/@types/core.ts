@@ -19,8 +19,7 @@ export type CompilerConfig = {
 
 export type CompilerGrammar = (
   node: NaytiveNode,
-  params: {
-    tsSourceFile: ts.SourceFile;
+  params?: {
     filePath?: string;
   }
 ) => string;
