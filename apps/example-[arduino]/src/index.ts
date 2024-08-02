@@ -1,13 +1,11 @@
-import { delay, OUTPUT, pinMode } from '@naytive/avr';
 import type { size_t } from '@naytive/types';
+import { delay, OUTPUT, pinMode } from '@naytive/avr';
+
+import { blink } from './blink';
 
 declare const RED_LED = 7;
 declare const AMBER_LED = 8;
 declare const GREEN_LED = 9;
-
-// unlike in regular TypeScript, we can use the
-// import statement anywhere to pull in our own modules
-import { blink } from './blink';
 
 export function setup() {
   pinMode(RED_LED, OUTPUT);
