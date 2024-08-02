@@ -7,6 +7,6 @@ module.exports = {
   compileType: '.ino', // This tells the compiler to compile the code as an Arduino sketch
   config: {
     board: 'arduino:avr:uno',
-    port: '/dev/cu.usbmodem1301',
+    port: '/dev/cu.usbmodem1201',
   },
 };

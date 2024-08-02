@@ -29,25 +29,11 @@ import type {
  * This will change when Naytive stops relying on TypeScript's AST and moves to its own AST.
  */
 export default class Lexer {
-  public static nodes: Record<string, NaytiveNode> = {};
-
   public static naytify(
     node: ts.Node,
     tsSourceFile: ts.SourceFile
   ): NaytiveNode {
     const id = `${node.pos}-${node.end}`;
-
-    if (this.nodes[id]) {
-      const cachedNode = node as NaytiveNode;
-
-      if (
-        (cachedNode.naytive?.type?.length || 0) > 0 ||
-        cachedNode.naytive?.symbol ||
-        cachedNode.naytive?.dependencies?.length > 0
-      ) {
-        return cachedNode;
-      }
-    }
 
     if (node.getChildren().length > 0) {
       node.forEachChild((child) => {
@@ -65,9 +51,11 @@ export default class Lexer {
     };
 
     if (node.kind === ts.SyntaxKind.VariableDeclaration) {
-      if (node.initializer) {
+      const variableDeclaration = node as ts.VariableDeclaration;
+
+      if (variableDeclaration.initializer) {
         const symbol = Parser.typeChecker
-          .getSymbolAtLocation(node.initializer)
+          .getSymbolAtLocation(variableDeclaration.initializer)
           ?.getDeclarations()?.[0]?.parent?.parent as NaytiveNode;
 
         if (symbol) {
@@ -75,111 +63,84 @@ export default class Lexer {
           nodeInfo.dependencies.push(nodeInfo.symbol);
         }
 
-        nodeInfo.initialValue = node.initializer.getText(tsSourceFile);
+        nodeInfo.initialValue = variableDeclaration.initializer.getText(tsSourceFile);
         nodeInfo.type = Parser.getType(
-          node.initializer?.kind === ts.SyntaxKind.Identifier
-            ? node.initializer
+          variableDeclaration.initializer?.kind === ts.SyntaxKind.Identifier
+            ? variableDeclaration.initializer
             : node,
           tsSourceFile
         );
 
-        node.initializer = this.naytify(node.initializer, tsSourceFile);
+        // @ts-expect-error - initializer is readonly
+        variableDeclaration.initializer = this.naytify(variableDeclaration.initializer, tsSourceFile);
       }
     } else if (node.kind === ts.SyntaxKind.Block) {
       node.forEachChild((child) => {
         child = this.naytify(child, tsSourceFile);
       });
-    } else if (node.kind === ts.SyntaxKind.ArrayLiteralExpression) {
-      // @ts-expect-error - el is readonly
-      node.elements.forEach((el) => {
-        el = this.naytify(el, tsSourceFile);
-      });
+    } else if (node.kind === ts.SyntaxKind.FunctionDeclaration) {
+      const functionDeclaration = node as ts.FunctionDeclaration;
+
+      nodeInfo.type = Parser.getType(functionDeclaration, tsSourceFile);
+
+      // @ts-expect-error - body is readonly
+      functionDeclaration.body = this.naytify(functionDeclaration.body!, tsSourceFile);
     }
 
     (node as any).id ??= id;
     (node as any).naytive ??= nodeInfo;
-    // (node as any).naytive ??= specialNode
-    //   ? nodeInfo
-    //   : this.findScopedDependencies(node, nodeInfo);
-
-    // if (
-    //   // @ts-expect-error - naytive is not a property of ts node
-    //   !node.parent?.naytive &&
-    //   node.parent?.kind !== ts.SyntaxKind.SourceFile
-    // ) {
-    //   //! @ts-expect-error - parent is readonly
-    //   console.log('THIS IS THE PARENT');
-    //   // node.parent = this.naytify(node?.parent, tsSourceFile);
-    // }
-
-    if (!this.nodes[id]) {
-      this.nodes[id] = node as NaytiveNode;
-
-      for (const dep of nodeInfo.dependencies) {
-        this.nodes[dep?.id]?.naytive?.dependents?.push(node as NaytiveNode);
-      }
-    }
 
     return node as NaytiveNode;
   }
 
-  public static findScopedDependencies(
-    node: ts.Node,
-    nodeInfo: NaytiveNode['naytive']
-  ): NaytiveNode['naytive'] {
-    if (
-      [
-        // ts.SyntaxKind.TemplateExpression,
-        // ts.SyntaxKind.ReturnStatement,
-        // ts.SyntaxKind.VariableDeclaration,
-        // ts.SyntaxKind.CallExpression,
-        ts.SyntaxKind.Identifier,
-      ].includes(node.kind)
-    ) {
-      const symbol = nodeInfo.symbol;
-      const parentFunction = this.findFuntionParent(node?.parent?.parent);
+  public static extractIdentifiers(node: ts.Node) {
+    const dependencies = [];
 
-      // console.log(
-      //   'NODE KIND',
-      //   ts.SyntaxKind[node.kind],
-      //   node.getText(node.getSourceFile()),
-      //   '----------',
-      //   parentFunction?.getText(node.getSourceFile())
-      // );
-
-      if (parentFunction && symbol) {
-        (
-          (parentFunction?.kind === ts.SyntaxKind.VariableDeclaration
-            ? parentFunction?.initializer?.body
-            : parentFunction?.body) as ts.FunctionBody
-        )?.forEachChild((child) => {
-          if (
-            ![ts.SyntaxKind.ImportClause, ts.SyntaxKind.SourceFile].includes(
-              symbol.kind
-            )
-          ) {
-            // @ts-expect-error - id is not a property of ts node
-            symbol.id ??= `${symbol.pos}-${symbol.end}`;
-
-            nodeInfo.rawScopedDependencies?.push(
-              symbol.getText(symbol.getSourceFile())
-            );
-
-            // @ts-expect-error - id is not a property of ts node
-            nodeInfo.scopedDependencies[symbol.id] = symbol;
-          }
-        });
-
-        // if (!isSymbolInParent) {
-        //   nodeInfo?.scopedDependencies.push(symbol);
-
-        //   this.nodes[`${parentFunction.pos}-${parentFunction.end}`] =
-        //     parentFunction;
-        // }
-      }
+    if (ts.isIdentifier(node)) {
+      dependencies.push(node);
+    } else {
+      node.forEachChild((child) => {
+        dependencies.push(...this.extractIdentifiers(child));
+      });
     }
 
-    return nodeInfo;
+    return dependencies;
+  }
+
+  public static findNodeDependencies(node: ts.Node) {
+    const parsedDeps: string[] = [];
+    const dependencies = this.extractIdentifiers(node);
+
+    dependencies.forEach((dependency) => {
+      const depSymbol = Parser.typeChecker.getSymbolAtLocation(dependency);
+
+      const isSameFunction =
+        depSymbol?.valueDeclaration === node;
+      const isDeclarationPresent = !!depSymbol?.valueDeclaration?.getText();
+
+      if (!isSameFunction && isDeclarationPresent) {
+        const nearestFunctionParent = Lexer.findFuntionParent(
+          depSymbol?.valueDeclaration!
+        );
+
+        if (
+          nearestFunctionParent !== node &&
+          (depSymbol?.valueDeclaration?.kind ===
+            ts.SyntaxKind.FunctionDeclaration ||
+            depSymbol?.valueDeclaration?.kind === ts.SyntaxKind.ArrowFunction ||
+            depSymbol?.valueDeclaration?.kind ===
+              ts.SyntaxKind.VariableDeclaration)
+        ) {
+          const valueDeclaration = depSymbol?.valueDeclaration;
+          // @ts-expect-error name is not defined on all nodes
+          const valueName = valueDeclaration?.name?.getText();
+
+          parsedDeps.push(valueName);
+        }
+      }
+    });
+
+    return parsedDeps;
   }
 
   public static findFuntionParent(
@@ -195,11 +156,11 @@ export default class Lexer {
           currentNode?.parent as ts.VariableDeclaration;
 
         if (variableDeclaration?.kind === ts.SyntaxKind.VariableDeclaration) {
-          return this.getCachedNode(variableDeclaration) as VariableDeclaration;
+          return variableDeclaration as VariableDeclaration;
         }
       }
 
-      return this.getCachedNode(currentNode) as FunctionDeclaration;
+      return currentNode as FunctionDeclaration;
     }
 
     return this.findFuntionParent(currentNode?.parent);
@@ -215,24 +176,5 @@ export default class Lexer {
     }
 
     return false;
-  }
-
-  public static getCachedNode(node: ts.Node): NaytiveNode | undefined {
-    const cachedNode = this.nodes?.[`${node.pos}-${node.end}`];
-
-    if (!cachedNode) {
-      // @ts-expect-error - id is not a property of ts node
-      node.id = `${node.pos}-${node.end}`;
-
-      this.nodes[`${node.pos}-${node.end}`] = node as NaytiveNode;
-    }
-
-    // return this.naytify(node, node.getSourceFile());
-
-    return this.nodes?.[`${node.pos}-${node.end}`];
-  }
-
-  public static clear() {
-    this.nodes = {};
   }
 }

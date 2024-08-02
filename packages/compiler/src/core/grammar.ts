@@ -140,7 +140,7 @@ grammar.set(ts.SyntaxKind.VariableDeclaration, (node, { tsSourceFile }) => {
   const variable = node as VariableDeclaration;
 
   const isRoot =
-    Parser.hasMain &&
+    (Parser.hasMain || Parser.config().compileType === '.ino') &&
     variable?.parent?.parent?.parent?.kind === ts.SyntaxKind.SourceFile;
 
   let variableName = variable.name.getText(tsSourceFile);
@@ -443,52 +443,25 @@ grammar.set(ts.SyntaxKind.FunctionDeclaration, (node, { tsSourceFile }) => {
     .join(', ');
 
   const isRoot =
-    Parser.hasMain &&
-    functionDeclaration?.parent?.parent?.parent?.kind ===
-      ts.SyntaxKind.SourceFile;
+    (Parser.hasMain || Parser.config().compileType === '.ino') &&
+    functionDeclaration?.parent?.kind ===
+      (ts.SyntaxKind.SourceFile || undefined);
+
+  console.log(
+    isRoot,
+    functionType,
+    ts.SyntaxKind[functionDeclaration?.parent?.kind],
+    functionDeclaration?.getText(tsSourceFile)
+  );
 
   if (!isRoot) {
-    const dependencies: ts.Node[] = [];
-    const parsedDeps: string[] = [];
-
-    const extractIdentifiers = (node: ts.Node) => {
-      if (ts.isIdentifier(node)) {
-        dependencies.push(node);
-      }
-
-      ts.forEachChild(node, extractIdentifiers);
-    };
-
-    extractIdentifiers(functionDeclaration);
-
-    dependencies.forEach((dependency) => {
-      const depSymbol = Parser.typeChecker.getSymbolAtLocation(dependency);
-
-      const isSameFunction = depSymbol?.valueDeclaration === functionDeclaration;
-      const isDeclarationPresent = !!depSymbol?.valueDeclaration?.getText();
-
-      if (!isSameFunction && isDeclarationPresent) {
-        const nearestFunctionParent = Lexer.findFuntionParent(depSymbol?.valueDeclaration!);
-
-        if (
-          nearestFunctionParent !== functionDeclaration &&
-          (
-            depSymbol?.valueDeclaration?.kind === ts.SyntaxKind.FunctionDeclaration ||
-            depSymbol?.valueDeclaration?.kind === ts.SyntaxKind.ArrowFunction ||
-            depSymbol?.valueDeclaration?.kind === ts.SyntaxKind.VariableDeclaration
-          )
-        ) {
-          const valueDeclaration = depSymbol?.valueDeclaration;
-          const valueName = valueDeclaration?.name?.getText();
-
-          parsedDeps.push(valueName);
-        }
-      }
-    });
+    const dependencies = Lexer.findNodeDependencies(functionDeclaration);
 
     return `${
       functionType === 'void' ? 'auto' : functionType
-    } ${functionName} = [${parsedDeps.join(', ')}](${functionArguments}) {${Parser.parseNode(
+    } ${functionName} = [${dependencies.join(
+      ', '
+    )}](${functionArguments}) {${Parser.parseNode(
       functionDeclaration.body! as any,
       tsSourceFile
     )}}`;
@@ -509,10 +482,10 @@ grammar.set(ts.SyntaxKind.ArrowFunction, (node, { tsSourceFile }) => {
     (node as ArrowFunction);
 
   const functionName = variableDeclaration?.name?.getText(tsSourceFile);
+  const functionType = arrowFunction.naytive?.type || variable.naytive?.type;
   const functionArguments = arrowFunction.parameters
     .map((parameter) => Parser.parseVariable(parameter, tsSourceFile))
     .join(', ');
-  const functionType = arrowFunction.naytive?.type || variable.naytive?.type;
 
   if (!functionName) {
     return `[](${functionArguments}) {${Parser.parseNode(
@@ -521,8 +494,18 @@ grammar.set(ts.SyntaxKind.ArrowFunction, (node, { tsSourceFile }) => {
     )}}`;
   }
 
-  if (arrowFunction.naytive?.isNested) {
-    return `${functionType} ${functionName} = [](${functionArguments}) {${Parser.parseNode(
+  const isRoot =
+    (Parser.hasMain || Parser.config().compileType === '.ino') &&
+    arrowFunction?.parent?.parent?.parent?.kind === ts.SyntaxKind.SourceFile;
+
+  if (!isRoot) {
+    const dependencies = Lexer.findNodeDependencies(arrowFunction);
+
+    return `${
+      functionType === 'void' ? 'auto' : functionType
+    } ${functionName} = [${dependencies.join(
+      ', '
+    )}](${functionArguments}) {${Parser.parseNode(
       arrowFunction.body! as any,
       tsSourceFile
     )}}`;

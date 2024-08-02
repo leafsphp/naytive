@@ -1,29 +1,21 @@
-import { int, size_t } from '@naytive/types';
-import { delay, digitalWrite, HIGH, LOW, OUTPUT, pinMode } from '@naytive/avr';
+import { delay, OUTPUT, pinMode } from '@naytive/avr';
+import type { size_t } from '@naytive/types';
 
 declare const RED_LED = 7;
 declare const AMBER_LED = 8;
 declare const GREEN_LED = 9;
 
-function blink(led: int, duration: int): void {
-  digitalWrite(led, HIGH);
-  delay(duration);
-  digitalWrite(led, LOW);
-}
+// unlike in regular TypeScript, we can use the
+// import statement anywhere to pull in our own modules
+import { blink } from './blink';
 
-function turn_off_all_leds(): void {
-  digitalWrite(RED_LED, LOW);
-  digitalWrite(GREEN_LED, LOW);
-  digitalWrite(AMBER_LED, LOW);
-}
-
-export function setup(): void {
+export function setup() {
   pinMode(RED_LED, OUTPUT);
   pinMode(GREEN_LED, OUTPUT);
   pinMode(AMBER_LED, OUTPUT);
 }
 
-export function loop(): void {
+export function loop() {
   for (let i: size_t = 0; i < 100; i++) {
     for (let j: size_t = 0; j < i; j++) {
       if (i % 5 == 0) {

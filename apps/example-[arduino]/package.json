@@ -10,10 +10,13 @@
   },
   "dependencies": {
     "@naytive/avr": "workspace:*",
+    "@naytive/compiler": "workspace:*",
     "@naytive/core": "workspace:*",
-    "@naytive/types": "workspace:*",
-    "@naytive/compiler": "workspace:*"
+    "@naytive/types": "workspace:*"
   },
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.1.0"
+  }
 }

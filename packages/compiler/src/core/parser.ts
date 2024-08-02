@@ -35,6 +35,7 @@ export default class Parser {
     }
 
     this._config = config;
+
     return this;
   }
 
@@ -162,7 +163,7 @@ export default class Parser {
       );
     });
 
-    return hasMainFunction()
+    return hasMainFunction() || this._config.compileType === '.ino'
       ? parsedCode.join('\n')
       : `\nint main() {${parsedCode.join('\n')} return 0;\n}`;
   }

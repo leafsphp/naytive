@@ -47,6 +47,10 @@ importers:
       '@naytive/types':
         specifier: workspace:*
         version: link:../../packages/naytive-types
+    devDependencies:
+      '@types/node':
+        specifier: ^22.1.0
+        version: 22.1.0
 
   apps/example-[cpp-files]:
     devDependencies:
@@ -1745,13 +1749,19 @@ packages:
       undici-types: 6.11.1
     dev: true
 
+  /@types/node@22.1.0:
+    resolution: {integrity: sha512-AOmuRF0R2/5j1knA3c6G3HOk523Ga+l+ZXltX8SF1+5oqcXijjfTd8fY3XRZqSihEu9XhtQnKYLmkFaoxgsJHw==}
+    dependencies:
+      undici-types: 6.13.0
+    dev: true
+
   /@types/normalize-package-data@2.4.1:
     resolution: {integrity: sha512-Gj7cI7z+98M282Tqmp2K5EIsoouUEzbBJhQQzDE3jSIRk6r9gsz0oUokqIUR4u1R3dMHo0pDHM7sNOHyhulypw==}
 
   /@types/prompts@2.4.9:
     resolution: {integrity: sha512-qTxFi6Buiu8+50/+3DGIWLHM6QuWsEKugJnnP6iv2Mc4ncxE4A/OJkjuVOA+5X0X1S/nq5VJRa8Lu+nwcvbrKA==}
     dependencies:
-      '@types/node': 20.14.9
+      '@types/node': 22.0.2
       kleur: 3.0.3
     dev: true
 
@@ -4471,6 +4481,10 @@ packages:
 
   /undici-types@6.11.1:
     resolution: {integrity: sha512-mIDEX2ek50x0OlRgxryxsenE5XaQD4on5U2inY7RApK3SOJpofyw7uW2AyfMKkhAxXIceo2DeWGVGwyvng1GNQ==}
+    dev: true
+
+  /undici-types@6.13.0:
+    resolution: {integrity: sha512-xtFJHudx8S2DSoujjMd1WeWvn7KKWFRESZTMeL1RptAYERu29D6jphMjjY+vn96jvN3kVPDNxU/E13VTaXj6jg==}
     dev: true
 
   /universalify@0.1.2:
