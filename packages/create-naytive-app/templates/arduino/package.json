@@ -1,0 +1,22 @@
+{
+  "name": "example-arduino",
+  "version": "1.0.0",
+  "description": "Arduino test",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "naytive --watch",
+    "build": "naytive",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@naytive/avr": "workspace:*",
+    "@naytive/compiler": "workspace:*",
+    "@naytive/core": "workspace:*",
+    "@naytive/types": "workspace:*"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.1.0"
+  }
+}

@@ -20,16 +20,16 @@ const argv = minimist<{
 
 const templates = [
   {
-    name: 'javascript',
-    color: chalk.yellow,
-    display: 'JavaScript',
-    value: 'js',
+    name: 'cpp',
+    color: chalk.blue,
+    display: 'Basic C++',
+    value: 'cpp',
   },
   {
-    name: 'typescript',
-    color: chalk.blue,
-    display: 'TypeScript',
-    value: 'ts',
+    name: 'arduino',
+    color: chalk.green,
+    display: 'Basic Arduino',
+    value: 'arduino',
   },
 ];
 
@@ -47,7 +47,7 @@ const main = async () => {
           type: 'text',
           name: 'directory',
           message: 'Project name:',
-          initial: 'my-hana-app',
+          initial: 'my-naytive-app',
           validate: (dir) => {
             if (dir.trim().length === 0) {
               return 'Project name must not be empty';
