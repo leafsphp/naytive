@@ -1,6 +1,7 @@
 {
-  "name": "example-pointers",
-  "version": "1.0.0",
+  "name": "example-memory",
+  "private": true,
+  "version": "1.0.1",
   "description": "C++ Pointers test",
   "main": "src/index.ts",
   "scripts": {

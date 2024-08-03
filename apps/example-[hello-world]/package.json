@@ -1,5 +1,6 @@
 {
   "name": "example-hello-world",
+  "private": true,
   "version": "1.0.0",
   "description": "Hello world test",
   "main": "src/index.ts",

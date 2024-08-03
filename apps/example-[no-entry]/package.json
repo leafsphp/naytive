@@ -1,5 +1,6 @@
 {
   "name": "example-no-entry",
+  "private": true,
   "version": "1.0.0",
   "description": "No entry function test",
   "main": "src/index.ts",

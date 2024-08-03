@@ -1,5 +1,3 @@
-import * as ts from 'typescript';
-
 import type { NaytiveNode } from './lexer';
 
 export type CompilerConfig = {

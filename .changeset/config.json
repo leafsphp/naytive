@@ -6,5 +6,16 @@
   "linked": [],
   "access": "public",
   "baseBranch": "main",
+  "ignore": [
+    "docs",
+    "example-arduino",
+    "example-cpp-files",
+    "example-hello-world",
+    "example-imports",
+    "example-loops",
+    "example-memory",
+    "example-no-entry",
+    "example-typescript-expressions"
+  ],
   "updateInternalDependencies": "patch"
 }

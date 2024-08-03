@@ -1,5 +1,6 @@
 {
   "name": "example-typescript-expressions",
+  "private": true,
   "version": "1.0.0",
   "description": "typescript expressions test",
   "main": "src/index.ts",
