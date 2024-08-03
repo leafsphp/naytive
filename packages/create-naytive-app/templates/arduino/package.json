@@ -9,10 +9,10 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "@naytive/avr": "workspace:*",
-    "@naytive/compiler": "workspace:*",
-    "@naytive/core": "workspace:*",
-    "@naytive/types": "workspace:*"
+    "@naytive/avr": "^0.2.0",
+    "@naytive/compiler": "^0.2.0",
+    "@naytive/core": "^0.2.0",
+    "@naytive/types": "^0.2.0"
   },
   "author": "",
   "license": "MIT",
