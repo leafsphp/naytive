@@ -228,7 +228,6 @@ grammar.set(ts.SyntaxKind.PropertyAccessExpression, (node) => {
 
   if (name === 'toUpperCase') {
     Parser.addNaytiveLib('str_to_upper');
-    Parser.addLibrary('#include <string>');
 
     return `str_to_upper(${expression})`;
   }
@@ -343,8 +342,6 @@ grammar.set(ts.SyntaxKind.TemplateExpression, (node) => {
   const tsSourceFile = node.getSourceFile();
   const templateExpression = node as TemplateExpression;
 
-  Parser.addLibrary('#include <string>');
-
   const parsedTemplateSpans = templateExpression.templateSpans.map((span) =>
     Parser.parseNode(span.expression as any)
   );
@@ -372,8 +369,6 @@ grammar.set(ts.SyntaxKind.FirstTemplateToken, (node) => {
 
 grammar.set(ts.SyntaxKind.StringLiteral, (node) => {
   const stringLiteral = node as StringLiteral;
-
-  Parser.addLibrary('#include <string>');
 
   return JSON.stringify(stringLiteral.text);
 });
