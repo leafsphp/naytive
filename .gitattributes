@@ -1,0 +1,5 @@
+* text=auto
+
+*.ts linguist-vendored=false
+*.cpp linguist-vendored=false
+*.h linguist-vendored=false
