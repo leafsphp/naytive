@@ -11,32 +11,48 @@ There are 2 ways to setup Naytive on your system:
 
 Both of these methods require you to have Node.js installed on your system. You can download Node.js from [here](https://nodejs.org/en/download/). Since Naytive compiles to C++, you will also need to have a C++ compiler to build the native binaries.
 
-## Setting up a new Naytive app using the Naytive CLI
+## Setting up a new Naytive app using create-naytive-app
 
-This is the recommended way to use Naytive. The Naytive CLI will help you create a new Naytive app with a basic project structure. It will also help you build and run your Naytive app. To get started, you can run the following command:
+This is the recommended way to use Naytive as it sets up a new Naytive app with a basic project structure. You can do this using your favourite package manager:
 
 ```bash
-npm create naytive-app <my-app>
+pnpm create naytive-app
 ```
 
-`<my-app>` is the name of your app. This command will create a new directory with the name `<my-app>` and set up a new Naytive app inside it. The Naytive app will have a basic project structure with a `src` directory containing the main Naytive source file `index.ts`. To build and run your Naytive app, you can run the following command:
+Or you can use `npx`/`pnpx`:
 
 ```bash
-npm run build
+npx create-naytive-app
+```
+
+This command will prompt you to enter the name of your Naytive app and select a template. You can choose from the following templates:
+
+```bash
+? Select a template: › - Use arrow-keys. Return to submit.
+❯   Basic C++
+    Basic Arduino
+```
+
+These are different templates that set up a new Naytive app with a different target environment. The `Basic C++` template sets up a new Naytive app with a basic project structure that compiles to a native binary executable. The `Basic Arduino` template sets up a new Naytive app with a basic project structure that compiles to an Arduino sketch. We plan to add more templates in the future, targeting different environments like WebAssembly, Raspberry Pi, etc.
+
+The generated Naytive app will have a basic project structure with a `src` directory containing the main Naytive source file `index.ts`. To build and run your Naytive app, you can run the following command:
+
+```bash
+pnpm run build
 ```
 
 Or you can run in development mode which will continuously watch for changes in your source files and rebuild your app:
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 ## Downloading the global Naytive binary
 
-You can download the global Naytive using npm. To do this, you can run the following command:
+You can download the global Naytive using your favourite package manager. To do this, you can run the following command:
 
 ```bash
-npm install -g @naytive/compiler
+pnpm install -g @naytive/compiler
 ```
 
 This will install the global Naytive binary on your system. You can now use the Naytive binary to build and run your Naytive apps. To build your Naytive app, you can run the following command:

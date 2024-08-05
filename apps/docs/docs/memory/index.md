@@ -19,7 +19,7 @@ Low-level programming can be error-prone, especially when working with pointers 
 A null pointer dereference occurs when you try to access the memory address of a null pointer. This can lead to a segmentation fault and crash your program. In simpler terms, it's like trying to access a property of an undefined object in JavaScript.
 
 ```ts
-const ptr: Pointer<int> = memory.pointer(...);
+const ptr: Pointer<int> = memory.unsafe(...);
 
 // We can create a null pointer by setting the value to null/undefined
 ptr.value = null; 
@@ -70,7 +70,7 @@ A dangling pointer is a pointer that continues to point to a memory location tha
 
 ```ts
 const a = 3;
-const ptr: Pointer<int> = memory.pointer(a);
+const ptr: Pointer<int> = memory.unsafe(a);
 
 // free the memory
 const value = ptr.dereference();
@@ -83,4 +83,4 @@ Naytive tries to prevent dangling pointers by automatically freeing memory when 
 
 ## For C/C++ Developers
 
-If you're coming from a C/C++ background, you'll find Naytive's memory management system to be quite similar to what you're used to. Naytive's pointers and memory allocation functions are designed to be familiar to C/C++ developers, so you should feel right at home, however, we encourage you to think of Naytive as a new language and not try to apply C/C++ practices directly to Naytive. Eg: you would use pointers for arrays in C/C++ but in Naytive arrays are first-class citizens and you don't need to use pointers for them.
+If you're coming from a C/C++ background, you'll find Naytive's memory management system to be quite similar to what you're used to. Naytive's pointers and memory allocation functions are designed to be familiar to C/C++ developers, so you should feel right at home, however, we encourage you to think of Naytive as a completely different environment and not try to apply C/C++ practices directly to Naytive. Eg: Naytive arrays are first-class citizens and you don't need to use pointers for them.

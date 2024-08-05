@@ -2,7 +2,7 @@
 
 ![image](https://github.com/user-attachments/assets/7f970c90-1465-436c-a1e2-929ad4dacc76)
 
-TypeScript is a great language for writing high-level code, but is not well-suited for writing low-level code. It is not designed to interact with the operating system, hardware, and other low-level components. This is where Naytive comes in. Naytive is a bridge that allows you to write TypeScript which is then converted into C/C++ so it can be compiled into machine code. This gives you the best of both worlds: the high-level features of TypeScript and the low-level capabilities of C/C++.
+TypeScript is an amazing language, but it has too many abstractions that make it not so suitable for writing code that does things like interacting with your memory, operating system, hardware, and other low-level components. This is where Naytive comes in. Naytive is a bridge that allows you to write TypeScript which is then converted into C/C++ so it can be compiled into machine code. This gives you the best of both worlds: the high-level features of TypeScript and the low-level capabilities of C/C++.
 
 ## What's possible?
 

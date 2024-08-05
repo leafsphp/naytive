@@ -18,23 +18,23 @@ export default defineConfig({
           { text: 'Installation', link: '/docs/intro/installation' },
           { text: 'Project Config', link: '/docs/intro/config' },
           { text: 'Naytive Comparison', link: '/docs/intro/comparison' },
-          { text: 'Language Tour', link: '/docs/intro/tour' },
+          { text: 'Naytive Tour', link: '/docs/intro/tour' },
           { text: 'Naytive for C++ devs', link: '/docs/intro/for-cpp-devs' },
           { text: 'Naytive for TS devs', link: '/docs/intro/for-ts-devs' },
         ],
       },
-      {
-        text: 'Language Guide',
-        items: [
-          { text: 'Basics', link: '/docs/lang/basics' },
-          { text: 'Imports', link: '/docs/lang/imports' },
-          { text: 'Standard lib', link: '/docs/lang/std' },
-          { text: 'Comments', link: '/docs/lang/comments' },
-          { text: 'Control Flow', link: '/docs/lang/control-flow' },
-          { text: 'Namespacing', link: '/docs/lang/namespacing' },
-          { text: 'Error handling', link: '/docs/lang/error-handling' },
-        ],
-      },
+      // {
+      //   text: 'Language Guide',
+      //   items: [
+      //     { text: 'Basics', link: '/docs/lang/basics' },
+      //     { text: 'Imports', link: '/docs/lang/imports' },
+      //     { text: 'Standard lib', link: '/docs/lang/std' },
+      //     { text: 'Comments', link: '/docs/lang/comments' },
+      //     { text: 'Control Flow', link: '/docs/lang/control-flow' },
+      //     { text: 'Namespacing', link: '/docs/lang/namespacing' },
+      //     { text: 'Error handling', link: '/docs/lang/error-handling' },
+      //   ],
+      // },
       {
         text: 'Data Types',
         items: [
@@ -59,21 +59,21 @@ export default defineConfig({
           // { text: 'Naytive for TS devs', link: '/docs/memory/for-ts-devs' },
         ],
       },
-      {
-        text: 'OOP',
-        items: [
-          { text: 'OOP Basics', link: '/docs/oop/' },
-          { text: 'Inheritance', link: '/docs/oop/inheritance' },
-          // { text: 'Installation', link: '/docs/oop/installation' },
-          // { text: 'Naytive for C++ devs', link: '/docs/oop/for-cpp-devs' },
-          // { text: 'Naytive for TS devs', link: '/docs/oop/for-ts-devs' },
-        ],
-      },
+      // {
+      //   text: 'OOP',
+      //   items: [
+      //     { text: 'OOP Basics', link: '/docs/oop/' },
+      //     { text: 'Inheritance', link: '/docs/oop/inheritance' },
+      //     // { text: 'Installation', link: '/docs/oop/installation' },
+      //     // { text: 'Naytive for C++ devs', link: '/docs/oop/for-cpp-devs' },
+      //     // { text: 'Naytive for TS devs', link: '/docs/oop/for-ts-devs' },
+      //   ],
+      // },
       {
         text: 'Advanced',
         items: [
-          { text: 'Async Naytive', link: '/docs/advanced/async' },
-          { text: 'Using Curl', link: '/docs/advanced/curl' },
+          // { text: 'Async Naytive', link: '/docs/advanced/async' },
+          // { text: 'Using Curl', link: '/docs/advanced/curl' },
           { text: 'Arduino', link: '/docs/advanced/arduino' },
           // { text: 'Naytive for C++ devs', link: '/docs/advanced/for-cpp-devs' },
           // { text: 'Naytive for TS devs', link: '/docs/advanced/for-ts-devs' },

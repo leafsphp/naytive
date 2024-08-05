@@ -1,5 +1,4 @@
-* text=auto
+apps/* linguist-vendored
 
-apps/* linguist-vendored=true
 *.js linguist-language=TypeScript
 *.h linguist-language=C++

@@ -1,4 +1,4 @@
-# Pointers
+# Pointers (WIP)
 
 Pointers are a powerful feature in Naytive that allows you to directly access memory addresses. They allow direct manipulation of memory and are essential for dynamic memory allocation and handling complex data structures.
 

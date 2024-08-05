@@ -1,6 +1,6 @@
-# Naytive Language Tour
+# Naytive Tour
 
-Hey there! Welcome to the Naytive language tour. In this tour, we'll take a look at the Naytive syntax and its features. We'll cover everything from basic data types to advanced concepts like classes and modules. Let's get started!
+Hey there! Welcome to the Naytive tour. In this tour, we'll take a look at the Naytive syntax and its features. We'll cover everything from basic data types to advanced concepts like classes and modules. Let's get started!
 
 <!-- ![image](https://github.com/user-attachments/assets/7337099c-aba0-4bd6-8d71-759ec6621e98) -->
 ![image](https://github.com/user-attachments/assets/4db772d8-abfc-4809-9b25-255bb8fae65c)
@@ -145,7 +145,7 @@ myFixedArray.push(6); // Error: Not enough space in the array.
 
 In this example, we declare a fixed-size array of integers with a size of 5. Naytive will allocate exactly 5 integers for this array, and you cannot add more elements to it. This is useful when you know the size of the array at compile time and want to avoid dynamic memory allocation.
 
-## Objects/Structs
+## Objects/Structs (WIP)
 
 Objects are a way to store key-value pairs in Naytive. If you are from a C/C++ background, you may be familiar with structs. Naytive objects are similar to C++ structs, but with a more flexible syntax. TypeScript provides a built-in object type that you can use to create objects. Here's an example:
 
@@ -382,3 +382,5 @@ or
 ```ts
 import { functionName } from '<c-library-name>';
 ```
+
+This is important because Naytive does not have an implementation of every C/C++ library, so you may need to use existing C/C++ libraries in your Naytive projects. Unfortunately, you will have no type information for these libraries, so you will have to rely on the original C/C++ documentation to understand how to use them.

@@ -16,7 +16,7 @@ That's pretty much all you need to know to get started with Naytive. If you're a
 
 Although Naytive shares many of C/C++ concepts, there are some huge differences between the two languages. Here are some of the key differences:
 
-- **TypeScript is a high-level language**: TypeScript is a high-level language which means that it is designed to be easy to read and write. This means a whole lot of things are abstracted away from you, which can be a good thing or a bad thing depending on your perspective. An example of this is how there are a bunch of different number types in C/C++ (int, long, short, etc.), but in TypeScript, there is only one main number type. Naytive has the ability to use TypeScript's native types, but also provides C/C++ types for those who prefer them.
+- **TypeScript is a high-level language**: To be fair, C++ is also a high-level language, but it doesn't look that way compared to the languages we have today. TypeScript is designed to be easy to read and write. This means a whole lot of things are abstracted away from you, which can be a good thing or a bad thing depending on your perspective. An example of this is how there are a bunch of different number types in C/C++ (int, long, short, etc.), but in TypeScript, there is only one main number type. Naytive has the ability to use TypeScript's native types, but also provides C/C++ types for those who prefer them.
 
 - **Modern C++ features**: Modern C++ features are designed to make your code more readable and maintainable. Naytive has a lot of these features built-in, such as classes, interfaces, arrays, and more. This means that you can write more readable and maintainable code in Naytive than you can in C/C++. For users of C and older versions of C++, you might need to learn some new ways of doing things, like creating arrays directly instead of using pointers.
 
@@ -27,7 +27,7 @@ Although Naytive shares many of C/C++ concepts, there are some huge differences 
 - **Includes and Imports**: In C/C++, you use `#include` to include header files, and in TypeScript, you use `import` to import modules. Naytive supports both imports of TypeScript modules and C/C++ header files, so you can use whichever one you prefer, however, you still need to use the import syntax to do this. eg:
   
   ```ts
-  import { blink } from './arduino_app.h';
+  import { myAwesomeFunction } from './my_application.h';
   ```
 
 - **Friendlier Standard Library**: Naytive does not share the C/C++ standard library, which means that you can't use functions like `printf` or `scanf`. Instead, Naytive provides its own standard library that is designed to be simple and efficient. You can still do all of the things you did in C/C++, just in a different way.
@@ -54,7 +54,7 @@ function main(): int {
 }
 ```
 
-Notice how we're using TypeScript's native types, classes, and interfaces to write this code. We're also using Naytive's standard library to interact with the console. This is a simple example, but it should give you a good idea of how Naytive works and how you can create something basic. Just like with C/C++, the main function is the entry point of the program, and it returns an integer value.
+Notice how we're using both TypeScript's native types and Naytive's "lower-level types" to write this code. We're also using Naytive's standard library to interact with the console. This is a simple example, but it should give you a good idea of how Naytive works and how you can create something basic. Just like with C/C++, the main function is the entry point of the program, and it returns an integer value.
 
 `int` is a C/C++ type that is used to represent integers. TypeScript does not have a built-in `int` type, so we have to import it from the `@naytive/types` module. This is just one example of how Naytive bridges the gap between TypeScript and C/C++. If you need to use other C/C++ types, you can import them from the `@naytive/types` module as well.
 
