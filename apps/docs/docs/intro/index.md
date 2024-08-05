@@ -1,7 +1,7 @@
 # Introduction
 
 ::: warning Early Development
-Naytive is in the very early stages of development. It is currently only capable of very limited stuff, but the documentation covers some future expected features. We will mark features that are not yet implemented with a "Coming Soon" tag and will be updating the documentation as we make progress on the project.
+Naytive is in the very early stages of development. Only a proof of concept has been implemented so far so a lot of the features mentioned in this documentation are not yet available. We are working hard to bring you a stable and feature-rich version of Naytive as soon as possible. Stay tuned!
 :::
 
 Naytive is a fast, lightweight and easy-to-use interface for writing low-level code in TypeScript. It is designed to be a simple and efficient way to replace C/C++ code with more readable and maintainable TypeScript code. This means that you can write all of your intense code in TypeScript, and still reap all the benefits of a low-level language with as few complexities as possible.
