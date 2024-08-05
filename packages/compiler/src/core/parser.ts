@@ -353,6 +353,8 @@ export default class Parser {
       /,.@#%&*()_ +{}|":?><`~;[]\-=/.test(varValue) ||
       / /.test(varValue)
     ) {
+      Parser.addLibrary('#include <string>');
+
       return 'std::string';
     }
 
