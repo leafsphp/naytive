@@ -115,6 +115,10 @@ importers:
       '@naytive/types':
         specifier: workspace:*
         version: link:../../packages/naytive-types
+    devDependencies:
+      '@types/node':
+        specifier: ^22.1.0
+        version: 22.1.0
 
   apps/example-[no-entry]:
     devDependencies:
@@ -1761,7 +1765,7 @@ packages:
   /@types/prompts@2.4.9:
     resolution: {integrity: sha512-qTxFi6Buiu8+50/+3DGIWLHM6QuWsEKugJnnP6iv2Mc4ncxE4A/OJkjuVOA+5X0X1S/nq5VJRa8Lu+nwcvbrKA==}
     dependencies:
-      '@types/node': 22.0.2
+      '@types/node': 22.1.0
       kleur: 3.0.3
     dev: true
 

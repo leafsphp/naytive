@@ -1,5 +1,5 @@
 * text=auto
 
-*.ts linguist-vendored=false
-*.cpp linguist-vendored=false
-*.h linguist-vendored=false
+apps/* linguist-vendored=true
+*.js linguist-language=TypeScript
+*.h linguist-language=C++
